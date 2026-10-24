@@ -21,7 +21,6 @@ Platform Customer Relationship Management (CRM) berbasis SaaS yang dirancang unt
 
 ```
 OCTO-CRM/
-├── PRD_OCTO_CRM.md                 # Product Requirements Document
 ├── Makefile                        # Perintah terpadu (make migrate-up, make backend, dll)
 ├── README.md
 ├── backend/
