@@ -412,14 +412,33 @@ func (h *InboxHandler) GetWhatsAppQR(c *gin.Context) {
 	}
 	if sessResp, err := client.Do(sessReq); err == nil && sessResp != nil {
 		if sessResp.StatusCode == http.StatusNotFound {
-			startBody := fmt.Sprintf(`{"name":"%s","config":{"noweb":{"store":{"enabled":true,"fullSync":false}}}}`, sessionName)
+			startBody := fmt.Sprintf(`{"name":"%s"}`, sessionName)
 			startReq, _ := http.NewRequest("POST", fmt.Sprintf("%s/api/sessions", wahaURL), bytes.NewBufferString(startBody))
 			startReq.Header.Set("Content-Type", "application/json")
 			if h.cfg.WhatsAppToken != "" {
 				startReq.Header.Set("X-Api-Key", h.cfg.WhatsAppToken)
 			}
 			_, _ = client.Do(startReq)
+
+			startSessReq, _ := http.NewRequest("POST", fmt.Sprintf("%s/api/sessions/%s/start", wahaURL, sessionName), nil)
+			if h.cfg.WhatsAppToken != "" {
+				startSessReq.Header.Set("X-Api-Key", h.cfg.WhatsAppToken)
+			}
+			_, _ = client.Do(startSessReq)
 			time.Sleep(1000 * time.Millisecond)
+		} else {
+			var sessData struct {
+				Status string `json:"status"`
+			}
+			if err := json.NewDecoder(sessResp.Body).Decode(&sessData); err == nil {
+				if sessData.Status == "STOPPED" || sessData.Status == "FAILED" {
+					startSessReq, _ := http.NewRequest("POST", fmt.Sprintf("%s/api/sessions/%s/start", wahaURL, sessionName), nil)
+					if h.cfg.WhatsAppToken != "" {
+						startSessReq.Header.Set("X-Api-Key", h.cfg.WhatsAppToken)
+					}
+					_, _ = client.Do(startSessReq)
+				}
+			}
 		}
 		sessResp.Body.Close()
 	}
