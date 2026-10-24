@@ -549,7 +549,7 @@ class ApiClient {
     formData.append('file', file);
 
     const token = typeof window !== 'undefined' ? localStorage.getItem('octo_token') : null;
-    const res = await fetch(`http://localhost:8080/api/v1/workspaces/${wsId}/inbox/upload`, {
+    const res = await fetch(`${API_BASE_URL}/workspaces/${wsId}/inbox/upload`, {
       method: 'POST',
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),

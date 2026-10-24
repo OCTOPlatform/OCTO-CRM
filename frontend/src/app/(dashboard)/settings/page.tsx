@@ -1390,7 +1390,7 @@ export default function SettingsPage() {
                 </div>
                 <div className="font-mono text-[11px] text-slate-600 bg-white p-2 rounded-lg border border-slate-200 select-all overflow-x-auto">
                   {typeof window !== 'undefined'
-                    ? `http://localhost:8080/api/v1/workspaces/${currentWorkspace?.id}/integrations/lead-intake`
+                    ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1'}/workspaces/${currentWorkspace?.id}/integrations/lead-intake`
                     : `/api/v1/workspaces/${currentWorkspace?.id}/integrations/lead-intake`}
                 </div>
                 {!isOctoTechnologies && (

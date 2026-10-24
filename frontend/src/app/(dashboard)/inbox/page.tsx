@@ -48,6 +48,7 @@ import {
   ShieldAlert,
   CheckCircle,
   XCircle,
+  AlertCircle,
   Settings,
   ExternalLink,
   Sparkles,
@@ -162,6 +163,17 @@ export default function InboxPage() {
   const [showConnectionInfo, setShowConnectionInfo] = useState(false);
   const [copiedWebhook, setCopiedWebhook] = useState(false);
   const [qrRefreshKey, setQrRefreshKey] = useState(Date.now());
+  const [qrLoading, setQrLoading] = useState(true);
+  const [qrHasError, setQrHasError] = useState(false);
+
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
+  const apiHostUrl = apiUrl.replace(/\/api\/v1\/?$/, '');
+
+  const getAttachmentFullUrl = (url?: string) => {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    return `${apiHostUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+  };
   const [wahaStatus, setWahaStatus] = useState<string>('checking');
   const [connectedPhone, setConnectedPhone] = useState<string>('');
   const [connectedName, setConnectedName] = useState<string>('');
@@ -580,6 +592,8 @@ export default function InboxPage() {
     if (!currentWorkspace) return;
     try {
       setRestartingSession(true);
+      setQrLoading(true);
+      setQrHasError(false);
       await api.restartWhatsAppSession(currentWorkspace.id, undefined, sessionName);
       setQrRefreshKey(Date.now());
       setTimeout(() => loadWhatsAppStatus(sessionName), 1200);
@@ -2086,13 +2100,13 @@ export default function InboxPage() {
                           <div className="mb-2">
                             {msg.metadata.attachment_type === 'image' || msg.metadata.mime_type?.startsWith('image/') ? (
                               <a
-                                href={msg.metadata.attachment_url.startsWith('http') ? msg.metadata.attachment_url : `http://localhost:8080${msg.metadata.attachment_url}`}
+                                href={getAttachmentFullUrl(msg.metadata.attachment_url)}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="block overflow-hidden rounded-xl group relative border border-white/10"
                               >
                                 <img
-                                  src={msg.metadata.attachment_url.startsWith('http') ? msg.metadata.attachment_url : `http://localhost:8080${msg.metadata.attachment_url}`}
+                                  src={getAttachmentFullUrl(msg.metadata.attachment_url)}
                                   alt={msg.metadata.attachment_name || 'Gambar'}
                                   className="max-h-64 max-w-full rounded-xl object-contain hover:scale-101 transition bg-black/20"
                                 />
@@ -2101,11 +2115,11 @@ export default function InboxPage() {
                               <video
                                 controls
                                 className="max-h-64 max-w-full rounded-xl bg-black"
-                                src={msg.metadata.attachment_url.startsWith('http') ? msg.metadata.attachment_url : `http://localhost:8080${msg.metadata.attachment_url}`}
+                                src={getAttachmentFullUrl(msg.metadata.attachment_url)}
                               />
                             ) : (
                               <a
-                                href={msg.metadata.attachment_url.startsWith('http') ? msg.metadata.attachment_url : `http://localhost:8080${msg.metadata.attachment_url}`}
+                                href={getAttachmentFullUrl(msg.metadata.attachment_url)}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 download={msg.metadata.attachment_name || 'dokumen'}
@@ -2631,16 +2645,49 @@ export default function InboxPage() {
 
                 <div className="flex flex-col sm:flex-row items-center gap-5">
                   {/* QR Image Box */}
-                  <div className="w-44 h-44 border-2 border-dashed border-emerald-300 rounded-xl p-2 bg-slate-50 flex items-center justify-center shrink-0 relative shadow-2xs">
-                    <img
-                      src={`http://localhost:8080/api/v1/workspaces/${currentWorkspace?.id || 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'}/inbox/whatsapp-qr?session=${sessionName}&token=${typeof window !== 'undefined' ? localStorage.getItem('octo_token') || '' : ''}&t=${qrRefreshKey}`}
-                      alt="WhatsApp QR Code"
-                      className="w-full h-full object-contain rounded-lg"
-                      onError={() => {
-                        // In case QR is being generated, retry after 1.5s
-                        setTimeout(() => setQrRefreshKey(Date.now()), 1500);
-                      }}
-                    />
+                  <div className="w-44 h-44 border-2 border-dashed border-emerald-300 rounded-xl p-2 bg-slate-50 flex items-center justify-center shrink-0 relative shadow-2xs overflow-hidden">
+                    {qrLoading && !qrHasError && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-50 p-2 text-center z-10">
+                        <RefreshCw className="w-6 h-6 animate-spin text-emerald-600 mb-1.5" />
+                        <span className="text-[10px] text-slate-500 font-medium">Memuat QR Code...</span>
+                      </div>
+                    )}
+                    {qrHasError ? (
+                      <div className="flex flex-col items-center justify-center p-3 text-center bg-rose-50/90 rounded-lg w-full h-full border border-rose-200">
+                        <AlertCircle className="w-6 h-6 text-rose-500 mb-1 shrink-0" />
+                        <span className="text-[10px] font-bold text-rose-800 leading-tight">
+                          QR Belum Tersedia
+                        </span>
+                        <span className="text-[9px] text-rose-600 mt-1 leading-tight line-clamp-2">
+                          Pastikan service WAHA aktif & WHATSAPP_GATEWAY_URL sudah diatur
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setQrHasError(false);
+                            setQrLoading(true);
+                            setQrRefreshKey(Date.now());
+                          }}
+                          className="mt-2 px-2.5 py-1 bg-white hover:bg-rose-100 text-rose-700 border border-rose-300 rounded-md text-[10px] font-bold shadow-2xs transition cursor-pointer"
+                        >
+                          Coba Lagi
+                        </button>
+                      </div>
+                    ) : (
+                      <img
+                        src={`${apiUrl}/workspaces/${currentWorkspace?.id || 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'}/inbox/whatsapp-qr?session=${sessionName}&token=${typeof window !== 'undefined' ? localStorage.getItem('octo_token') || '' : ''}&t=${qrRefreshKey}`}
+                        alt="WhatsApp QR Code"
+                        className={`w-full h-full object-contain rounded-lg transition-opacity duration-200 ${qrLoading ? 'opacity-0' : 'opacity-100'}`}
+                        onLoad={() => {
+                          setQrLoading(false);
+                          setQrHasError(false);
+                        }}
+                        onError={() => {
+                          setQrLoading(false);
+                          setQrHasError(true);
+                        }}
+                      />
+                    )}
                   </div>
 
                   {/* 4 Simple Steps */}
