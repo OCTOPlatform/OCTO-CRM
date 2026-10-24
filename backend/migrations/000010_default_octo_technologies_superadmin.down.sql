@@ -1,0 +1,6 @@
+-- 000010_default_octo_technologies_superadmin.down.sql
+
+DELETE FROM workspace_members WHERE user_id = '0c700000-0000-0000-0000-000000000001';
+DELETE FROM pipelines WHERE workspace_id = '0c700000-0000-0000-0000-000000000000';
+DELETE FROM workspaces WHERE id = '0c700000-0000-0000-0000-000000000000';
+DELETE FROM users WHERE id = '0c700000-0000-0000-0000-000000000001';

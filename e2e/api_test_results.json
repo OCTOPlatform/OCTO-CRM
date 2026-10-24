@@ -1,0 +1,287 @@
+[
+  {
+    "name": "Health Check Endpoint (GET /health)",
+    "status": "PASSED",
+    "duration_ms": 10.38,
+    "detail": {
+      "service": "OCTO CRM API",
+      "status": "ok",
+      "timestamp": "2026-10-19T19:09:34+07:00",
+      "version": "1.0.0"
+    }
+  },
+  {
+    "name": "Authentication Login Owner (POST /api/v1/auth/login)",
+    "status": "PASSED",
+    "duration_ms": 89.75,
+    "detail": {
+      "email": "budi@octocrm.id",
+      "workspace_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+    }
+  },
+  {
+    "name": "Security Gate: Invalid Password (POST /api/v1/auth/login)",
+    "status": "PASSED",
+    "duration_ms": 90.88,
+    "detail": {
+      "status": 401,
+      "error": "invalid email or password"
+    }
+  },
+  {
+    "name": "Authenticated Profile Retrieval (GET /api/v1/auth/me)",
+    "status": "PASSED",
+    "duration_ms": 3.21,
+    "detail": {
+      "id": "11111111-1111-1111-1111-111111111111",
+      "email": "budi@octocrm.id",
+      "full_name": "Budi Santoso",
+      "avatar_url": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120&auto=format&fit=crop&q=80",
+      "created_at": "2026-10-18T15:16:17.86516+07:00",
+      "updated_at": "2026-10-18T15:16:17.86516+07:00"
+    }
+  },
+  {
+    "name": "Security Gate: Tenant Boundary Isolation (GET foreign workspace)",
+    "status": "PASSED",
+    "duration_ms": 2.71,
+    "detail": {
+      "expected": "403/404",
+      "actual": 403
+    }
+  },
+  {
+    "name": "Security Gate: Unauthenticated Rejection (GET without Token)",
+    "status": "PASSED",
+    "duration_ms": 1.28,
+    "detail": {
+      "expected": 401,
+      "actual": 401
+    }
+  },
+  {
+    "name": "Contact Creation with E.164 Normalization (POST /contacts)",
+    "status": "PASSED",
+    "duration_ms": 8.51,
+    "detail": {
+      "id": "e700a484-fb71-441b-bffd-3eb7540d8ade",
+      "workspace_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      "company_id": null,
+      "first_name": "Tester_1792411774",
+      "last_name": "Acceptance",
+      "full_name": "Tester_1792411774 Acceptance",
+      "email": "test_1792411774@example.com",
+      "phone": "+6281292411774",
+      "normalized_phone": "6281292411774",
+      "job_title": "QA Director",
+      "lead_source": "Organic",
+      "tags": [
+        "automated-test",
+        "qa"
+      ],
+      "notes": "",
+      "consent_status": "granted",
+      "is_archived": false,
+      "custom_fields": {},
+      "owner_id": null,
+      "created_at": "2026-10-19T19:09:34.367595+07:00",
+      "updated_at": "2026-10-19T19:09:34.367595+07:00"
+    }
+  },
+  {
+    "name": "Contact List Retrieval (GET /contacts)",
+    "status": "PASSED",
+    "duration_ms": 3.25,
+    "detail": {
+      "count": 19
+    }
+  },
+  {
+    "name": "Contact Duplicate Detection (GET /contacts/duplicates)",
+    "status": "PASSED",
+    "duration_ms": 2.28,
+    "detail": {
+      "duplicates_checked": true
+    }
+  },
+  {
+    "name": "Company Entity Creation (POST /companies)",
+    "status": "PASSED",
+    "duration_ms": 2.7,
+    "detail": {
+      "id": "988c66dd-e0e3-49bb-8baa-b3383e31da7d",
+      "workspace_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      "name": "PT Sinergi Mandiri 1792411774",
+      "industry": "Teknologi",
+      "website": "",
+      "phone": "+62215551234",
+      "email": "",
+      "address": "",
+      "created_at": "2026-10-19T19:09:34.381066+07:00",
+      "updated_at": "2026-10-19T19:09:34.381066+07:00"
+    }
+  },
+  {
+    "name": "Sales Pipeline & Stages Retrieval (GET /pipelines)",
+    "status": "PASSED",
+    "duration_ms": 3.29,
+    "detail": {
+      "pipeline_name": "Sales Pipeline Utama",
+      "stages_count": 7
+    }
+  },
+  {
+    "name": "Deal Creation in Pipeline (POST /deals)",
+    "status": "PASSED",
+    "duration_ms": 9.19,
+    "detail": {
+      "id": "23a2553c-163a-4508-9d3b-4aa336535b9d",
+      "workspace_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      "pipeline_id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+      "pipeline_name": "Sales Pipeline Utama",
+      "stage_id": "dddddddd-dddd-dddd-dddd-dddddddddd01",
+      "stage_name": "New Lead",
+      "contact_id": "e700a484-fb71-441b-bffd-3eb7540d8ade",
+      "contact_name": "Tester_1792411774 Acceptance",
+      "contact_email": "test_1792411774@example.com",
+      "contact_phone": "+6281292411774",
+      "company_id": "988c66dd-e0e3-49bb-8baa-b3383e31da7d",
+      "company_name": "PT Sinergi Mandiri 1792411774",
+      "owner_id": "11111111-1111-1111-1111-111111111111",
+      "owner_name": "Budi Santoso",
+      "title": "Kesepakatan Solusi ERP Enterprise",
+      "value": 75000000,
+      "currency": "IDR",
+      "expected_close_date": null,
+      "status": "open",
+      "lost_reason": "",
+      "notes": "Deal created during acceptance testing",
+      "created_at": "2026-10-19T19:09:34.387205+07:00",
+      "updated_at": "2026-10-19T19:09:34.387205+07:00"
+    }
+  },
+  {
+    "name": "Deal Kanban Stage Progression (PATCH /deals/:id/stage)",
+    "status": "PASSED",
+    "duration_ms": 9.28,
+    "detail": {
+      "id": "23a2553c-163a-4508-9d3b-4aa336535b9d",
+      "workspace_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      "pipeline_id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+      "pipeline_name": "Sales Pipeline Utama",
+      "stage_id": "dddddddd-dddd-dddd-dddd-dddddddddd02",
+      "stage_name": "Contacted",
+      "contact_id": "e700a484-fb71-441b-bffd-3eb7540d8ade",
+      "contact_name": "Tester_1792411774 Acceptance",
+      "contact_email": "test_1792411774@example.com",
+      "contact_phone": "+6281292411774",
+      "company_id": "988c66dd-e0e3-49bb-8baa-b3383e31da7d",
+      "company_name": "PT Sinergi Mandiri 1792411774",
+      "owner_id": "11111111-1111-1111-1111-111111111111",
+      "owner_name": "Budi Santoso",
+      "title": "Kesepakatan Solusi ERP Enterprise",
+      "value": 75000000,
+      "currency": "IDR",
+      "expected_close_date": null,
+      "status": "open",
+      "lost_reason": "",
+      "notes": "Deal created during acceptance testing",
+      "created_at": "2026-10-19T19:09:34.387205+07:00",
+      "updated_at": "2026-10-19T19:09:34.401489+07:00"
+    }
+  },
+  {
+    "name": "Task Creation with Due Date & Priority (POST /tasks)",
+    "status": "PASSED",
+    "duration_ms": 6.77,
+    "detail": {
+      "id": "e9de1b2f-eb17-4806-b21b-44d553d1fcdc",
+      "workspace_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      "contact_id": "e700a484-fb71-441b-bffd-3eb7540d8ade",
+      "contact_name": "Tester_1792411774 Acceptance",
+      "deal_id": "23a2553c-163a-4508-9d3b-4aa336535b9d",
+      "deal_title": "Kesepakatan Solusi ERP Enterprise",
+      "assigned_to_id": "11111111-1111-1111-1111-111111111111",
+      "assigned_to_name": "Budi Santoso",
+      "title": "Follow up negosiasi kontrak via WhatsApp",
+      "description": "",
+      "due_date": "2026-10-21T00:00:00+07:00",
+      "priority": "high",
+      "status": "open",
+      "is_overdue": false,
+      "completed_at": null,
+      "created_at": "2026-10-19T19:09:34.406085+07:00",
+      "updated_at": "2026-10-19T19:09:34.406085+07:00"
+    }
+  },
+  {
+    "name": "Task Completion Status Toggle (PATCH /tasks/:id/toggle)",
+    "status": "PASSED",
+    "duration_ms": 6.33,
+    "detail": {
+      "id": "e9de1b2f-eb17-4806-b21b-44d553d1fcdc",
+      "workspace_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      "contact_id": "e700a484-fb71-441b-bffd-3eb7540d8ade",
+      "contact_name": "Tester_1792411774 Acceptance",
+      "deal_id": "23a2553c-163a-4508-9d3b-4aa336535b9d",
+      "deal_title": "Kesepakatan Solusi ERP Enterprise",
+      "assigned_to_id": "11111111-1111-1111-1111-111111111111",
+      "assigned_to_name": "Budi Santoso",
+      "title": "Follow up negosiasi kontrak via WhatsApp",
+      "description": "",
+      "due_date": "2026-10-21T00:00:00+07:00",
+      "priority": "high",
+      "status": "completed",
+      "is_overdue": false,
+      "completed_at": "2026-10-19T19:09:34.41448+07:00",
+      "created_at": "2026-10-19T19:09:34.406085+07:00",
+      "updated_at": "2026-10-19T19:09:34.414785+07:00"
+    }
+  },
+  {
+    "name": "Dashboard & Reports Summary Metrics (GET /reports/summary)",
+    "status": "PASSED",
+    "duration_ms": 3.57,
+    "detail": {
+      "open_pipeline_value": 655000000,
+      "won_deal_value": 35000000,
+      "total_contacts": 19,
+      "overdue_tasks_count": 0,
+      "due_today_tasks_count": 6,
+      "total_deals_count": 15,
+      "conversion_rate": 100
+    }
+  },
+  {
+    "name": "Pipeline Funnel Conversion Analytics (GET /reports/funnel)",
+    "status": "PASSED",
+    "duration_ms": 2.64,
+    "detail": {
+      "stages_funnel_count": 7
+    }
+  },
+  {
+    "name": "Security Audit Log Trail (GET /reports/audit-logs)",
+    "status": "PASSED",
+    "duration_ms": 2.77,
+    "detail": {
+      "audit_events_count": 50
+    }
+  },
+  {
+    "name": "Atomic Lead Intake Ingestion Contract (POST /integrations/lead-intake)",
+    "status": "PASSED",
+    "duration_ms": 11.12,
+    "detail": {
+      "contact_id": "a2991f72-13f8-4aaa-8fac-b29d99789888",
+      "deal_id": "db535870-0546-4715-b9c5-e13d1764720d",
+      "task_id": "84bcc250-6964-4174-88e7-fb62a43e0f30",
+      "tags": [
+        "Lead Intake",
+        "request-demo",
+        "OCTO CRM Enterprise",
+        "google_search"
+      ]
+    }
+  }
+]
