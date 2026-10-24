@@ -23,11 +23,12 @@ import {
   Sparkles,
   RefreshCw,
   Send,
+  Trash2,
 } from 'lucide-react';
 import Link from 'next/link';
 
 export default function MasterTenantsPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [tenants, setTenants] = useState<MasterWorkspaceSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -52,6 +53,8 @@ export default function MasterTenantsPage() {
 
   const [copiedLink, setCopiedLink] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<MasterWorkspaceSummary | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const loadData = async () => {
     try {
@@ -128,6 +131,28 @@ export default function MasterTenantsPage() {
     }
   };
 
+  const handleInitiateDelete = (tenant: MasterWorkspaceSummary) => {
+    if (tenant.slug === 'octo-technologies' || tenant.id === '0c700000-0000-0000-0000-000000000000') {
+      alert('Perusahaan utama platform (PT OCTO Technologies Indonesia) tidak dapat dihapus.');
+      return;
+    }
+    setDeleteTarget(tenant);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      setDeleteLoading(true);
+      await api.deleteMasterWorkspace(deleteTarget.id);
+      setDeleteTarget(null);
+      loadData();
+    } catch (e: any) {
+      alert(e.message || 'Gagal menghapus perusahaan');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     setCopiedLink(true);
@@ -165,6 +190,15 @@ export default function MasterTenantsPage() {
   const activeCompanies = tenants.filter((t) => t.status === 'active').length;
   const suspendedCompanies = tenants.filter((t) => t.status === 'suspended').length;
   const totalPlatformUsers = tenants.reduce((acc, t) => acc + (t.total_members || 1), 0);
+
+  if (authLoading) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-8 bg-slate-50 min-h-screen">
+        <RefreshCw className="w-8 h-8 animate-spin text-[#00AFC4] mb-3" />
+        <p className="text-xs text-slate-500 font-medium">Memverifikasi otentikasi Superadmin...</p>
+      </div>
+    );
+  }
 
   if (!user?.is_superadmin || user?.email?.toLowerCase() !== 'egichandrapratama@gmail.com') {
     return (
@@ -432,15 +466,17 @@ export default function MasterTenantsPage() {
                         {/* Actions */}
                         <td className="px-5 py-4 text-right">
                           <div className="flex items-center justify-end gap-2">
+                            {/* Tombol Buka Akses / Tangguhkan */}
                             <button
                               type="button"
                               onClick={() => handleToggleStatus(t)}
-                              disabled={actionLoading === t.id}
+                              disabled={actionLoading === t.id || deleteLoading}
                               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
                                 isSuspended
                                   ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
-                                  : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
+                                  : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200'
                               }`}
+                              title={isSuspended ? 'Buka kembali akses untuk perusahaan ini' : 'Tangguhkan sementara akses perusahaan ini'}
                             >
                               {isSuspended ? (
                                 <>
@@ -454,6 +490,20 @@ export default function MasterTenantsPage() {
                                 </>
                               )}
                             </button>
+
+                            {/* Tombol Hapus Perusahaan */}
+                            {t.slug !== 'octo-technologies' && t.id !== '0c700000-0000-0000-0000-000000000000' && (
+                              <button
+                                type="button"
+                                onClick={() => handleInitiateDelete(t)}
+                                disabled={actionLoading === t.id || deleteLoading}
+                                className="px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 hover:border-rose-300 disabled:opacity-50"
+                                title="Hapus permanen perusahaan ini beserta seluruh datanya"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span>Hapus</span>
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -684,6 +734,65 @@ export default function MasterTenantsPage() {
                 </form>
               </div>
             )}
+          </div>
+        </div>
+      )}
+      {/* MODAL: KONFIRMASI HAPUS PERUSAHAAN */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-rose-200 animate-in zoom-in-95 duration-150">
+            <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-4">
+              <Trash2 className="w-6 h-6" />
+            </div>
+
+            <h3 className="font-extrabold text-base text-slate-900 text-center">
+              Hapus Perusahaan Klien?
+            </h3>
+            
+            <p className="text-xs text-slate-500 text-center mt-2 leading-relaxed">
+              Anda akan menghapus permanen perusahaan <strong>"{deleteTarget.name}"</strong> (slug: <code className="bg-slate-100 px-1 py-0.5 rounded text-[11px] text-slate-700">{deleteTarget.slug}</code>).
+            </p>
+
+            <div className="my-4 p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-[11px] text-rose-800 space-y-1.5">
+              <div className="flex items-center gap-1.5 font-bold text-rose-900">
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>Peringatan Data Permanen:</span>
+              </div>
+              <ul className="list-disc list-inside space-y-1 text-rose-700 pl-1">
+                <li>Seluruh data kontak, deals, tiket support, dan chat WhatsApp akan terhapus.</li>
+                <li>Akun pengguna dan akses login tim perusahaan ini akan dicabut.</li>
+                <li>Tindakan ini <strong>TIDAK DAPAT DIBATALKAN</strong>.</li>
+              </ul>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                disabled={deleteLoading}
+                className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={deleteLoading}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition shadow-xs disabled:opacity-60 flex items-center justify-center gap-1.5"
+              >
+                {deleteLoading ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Menghapus...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Ya, Hapus Permanen</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

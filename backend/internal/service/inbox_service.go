@@ -1366,7 +1366,7 @@ func (s *InboxService) UpdateAssignment(workspaceID, currentUserID, conversation
 			// Email notification
 			if targetUser.Email != "" {
 				go func(toEmail, recName, actName, cName, cId, prio string) {
-					chatURL := fmt.Sprintf("http://localhost:3000/inbox?conversation_id=%s", conversationID)
+					chatURL := fmt.Sprintf("%s/inbox?conversation_id=%s", utils.GetFrontendURL(), conversationID)
 					_ = utils.SendAssignmentEmail(toEmail, recName, actName, cName, cId, prio, chatURL, "OCTO CRM")
 				}(targetUser.Email, targetUser.FullName, actorName, contactName, channelIdentifier, priority)
 			}
@@ -1856,7 +1856,7 @@ func (s *InboxService) EscalateConversation(workspaceID, currentUserID, conversa
 	// 2. Email Notification to Supervisor/Owner
 	if targetUser != nil && targetUser.Email != "" {
 		go func(toEmail, recName, actName, cName, cId, rsn, prio string) {
-			chatURL := fmt.Sprintf("http://localhost:3000/inbox?conversation_id=%s", conversationID)
+			chatURL := fmt.Sprintf("%s/inbox?conversation_id=%s", utils.GetFrontendURL(), conversationID)
 			_ = utils.SendEscalationEmail(
 				toEmail,
 				recName,

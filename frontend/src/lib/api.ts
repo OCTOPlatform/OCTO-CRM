@@ -255,6 +255,12 @@ class ApiClient {
     });
   }
 
+  async deleteMasterWorkspace(wsId: string) {
+    return this.request<void>(`/master/workspaces/${wsId}`, {
+      method: 'DELETE',
+    });
+  }
+
   // --- Contacts ---
   async listContacts(wsId: string, params: { page?: number; per_page?: number; query?: string; lead_source?: string; tag?: string } = {}) {
     const q = new URLSearchParams();

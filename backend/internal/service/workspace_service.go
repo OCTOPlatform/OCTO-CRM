@@ -212,7 +212,7 @@ func (s *WorkspaceService) InviteMember(workspaceID, currentUserID string, req d
 		return nil, fmt.Errorf("failed to save invitation: %w", err)
 	}
 
-	inviteURL := fmt.Sprintf("http://localhost:3000/invite?token=%s", token)
+	inviteURL := fmt.Sprintf("%s/invite?token=%s", utils.GetFrontendURL(), token)
 	inv.InviteURL = inviteURL
 	inv.WorkspaceName = ws.Name
 	inv.InvitedByName = inviterName
@@ -256,7 +256,7 @@ func (s *WorkspaceService) ListInvitations(workspaceID string) ([]domain.Workspa
 	}
 	now := time.Now()
 	for i := range invs {
-		invs[i].InviteURL = fmt.Sprintf("http://localhost:3000/invite?token=%s", invs[i].Token)
+		invs[i].InviteURL = fmt.Sprintf("%s/invite?token=%s", utils.GetFrontendURL(), invs[i].Token)
 		if invs[i].Status == "pending" && now.After(invs[i].ExpiresAt) {
 			invs[i].Status = "expired"
 		}
@@ -303,7 +303,7 @@ func (s *WorkspaceService) ResendInvitation(workspaceID, currentUserID, invitati
 	inv.Token = newToken
 	inv.ExpiresAt = newExpiresAt
 	inv.Status = "pending"
-	inviteURL := fmt.Sprintf("http://localhost:3000/invite?token=%s", newToken)
+	inviteURL := fmt.Sprintf("%s/invite?token=%s", utils.GetFrontendURL(), newToken)
 	inv.InviteURL = inviteURL
 
 	roleLabel := "Anggota Tim"

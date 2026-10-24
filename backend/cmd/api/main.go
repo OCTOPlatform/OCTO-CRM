@@ -291,6 +291,7 @@ func main() {
 			masterRoutes.GET("/workspaces", masterHandler.ListWorkspaces)
 			masterRoutes.POST("/workspaces", masterHandler.ProvisionCompany)
 			masterRoutes.PATCH("/workspaces/:id/status", masterHandler.UpdateCompanyStatus)
+			masterRoutes.DELETE("/workspaces/:id", masterHandler.DeleteCompany)
 		}
 	}
 

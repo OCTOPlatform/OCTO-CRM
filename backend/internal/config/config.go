@@ -19,6 +19,7 @@ type Config struct {
 	WhatsAppToken          string
 	WhatsAppPhoneNumberID  string
 	WhatsAppGatewayURL     string
+	FrontendURL            string
 }
 
 func Load() *Config {
@@ -59,6 +60,17 @@ func Load() *Config {
 		waVerifyToken = "octo_crm_whatsapp_verify_token"
 	}
 
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		frontendURL = os.Getenv("APP_URL")
+	}
+	if frontendURL == "" {
+		frontendURL = os.Getenv("NEXT_PUBLIC_APP_URL")
+	}
+	if frontendURL == "" {
+		frontendURL = "http://localhost:3000"
+	}
+
 	return &Config{
 		Port:                   port,
 		DatabaseURL:            dbURL,
@@ -71,5 +83,6 @@ func Load() *Config {
 		WhatsAppToken:          os.Getenv("WHATSAPP_TOKEN"),
 		WhatsAppPhoneNumberID:  os.Getenv("WHATSAPP_PHONE_NUMBER_ID"),
 		WhatsAppGatewayURL:     os.Getenv("WHATSAPP_GATEWAY_URL"),
+		FrontendURL:            frontendURL,
 	}
 }
