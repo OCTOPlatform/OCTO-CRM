@@ -295,6 +295,34 @@ func (h *InboxHandler) ToggleBot(c *gin.Context) {
 	c.JSON(http.StatusOK, domain.SuccessResponse(nil, msg))
 }
 
+func (h *InboxHandler) GetBotSettings(c *gin.Context) {
+	workspaceID := c.GetString("workspaceID")
+	settings, err := h.inboxService.GetBotSettings(workspaceID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, domain.ErrorResponse("Gagal mengambil pengaturan chatbot: "+err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, domain.SuccessResponse(settings, "Pengaturan chatbot berhasil diambil"))
+}
+
+func (h *InboxHandler) UpdateBotSettings(c *gin.Context) {
+	workspaceID := c.GetString("workspaceID")
+
+	var req domain.UpdateBotSettingsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, domain.ErrorResponse("Format payload tidak valid: "+err.Error()))
+		return
+	}
+
+	updated, err := h.inboxService.UpdateBotSettings(workspaceID, &req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, domain.ErrorResponse("Gagal memperbarui pengaturan chatbot: "+err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, domain.SuccessResponse(updated, "Pengaturan dan template chatbot berhasil diperbarui"))
+}
+
 func (h *InboxHandler) IncomingWebhook(c *gin.Context) {
 	workspaceID := c.GetString("workspaceID")
 

@@ -703,3 +703,180 @@ func (r *InboxRepository) GetMonitoringStats(workspaceID string, department stri
 
 	return &stats, nil
 }
+
+// GetWorkspaceBotSettings fetches the custom chatbot template & configuration for a workspace.
+// If none exists yet, it seeds a default one and returns it.
+func (r *InboxRepository) GetWorkspaceBotSettings(workspaceID string) (*domain.WorkspaceBotSettings, error) {
+	var settings domain.WorkspaceBotSettings
+	query := `
+		SELECT 
+			id, workspace_id, bot_enabled, bot_name, greeting_message,
+			menu_1_title, menu_1_keywords, menu_1_response,
+			menu_2_title, menu_2_keywords, menu_2_response,
+			menu_3_title, menu_3_keywords, menu_3_response,
+			menu_4_title, menu_4_keywords, menu_4_response,
+			handoff_message, custom_faqs, created_at, updated_at
+		FROM workspace_bot_settings
+		WHERE workspace_id = $1
+		LIMIT 1
+	`
+	err := r.db.Get(&settings, query, workspaceID)
+	if err == nil {
+		return &settings, nil
+	}
+
+	// If not found, insert default
+	insertQuery := `
+		INSERT INTO workspace_bot_settings (
+			workspace_id, bot_enabled, bot_name, greeting_message,
+			menu_1_title, menu_1_keywords, menu_1_response,
+			menu_2_title, menu_2_keywords, menu_2_response,
+			menu_3_title, menu_3_keywords, menu_3_response,
+			menu_4_title, menu_4_keywords, menu_4_response,
+			handoff_message, custom_faqs, created_at, updated_at
+		) VALUES (
+			$1, true, 'Asisten Virtual OCTO', 
+			'Halo {name}! 👋 Selamat datang di Layanan Pelanggan {company}.\n\nSaya adalah Asisten Virtual Otomatis. Saya siap membantu Anda 24/7. Silakan pilih menu informasi berikut:\n\n1️⃣ {menu_1_title}\n2️⃣ {menu_2_title}\n3️⃣ {menu_3_title}\n4️⃣ {menu_4_title}\n\nSilakan ketik nomor (1-4) atau tuliskan pertanyaan Anda langsung ya!',
+			'Informasi Produk & Layanan', 'produk,fitur,layanan,keunggulan,kemampuan,apa itu', 'Berikut adalah informasi produk dan layanan unggulan kami. Kami berkomitmen memberikan solusi terbaik untuk kebutuhan Anda.\n\nKetik *2* untuk melihat paket harga, atau ketik *CS* jika ingin berbicara langsung dengan tim kami!',
+			'Paket Harga & Penawaran', 'harga,paket,biaya,tarif,langganan,pricelist,berapa', 'Kami menyediakan berbagai paket penawaran fleksibel yang dapat disesuaikan dengan kebutuhan Anda.\n\nKetik *CS* untuk mendapatkan simulasi perhitungan biaya dan proposal penawaran resmi dari tim Sales kami!',
+			'Jam Operasional & Alamat Kantor', 'jam operasional,jam kerja,alamat,kantor,lokasi,jadwal', '⏰ *Jam Operasional Kantor:* \nSenin - Jumat: 08:00 - 18:00 WIB\nSabtu: 09:00 - 15:00 WIB\n(Layanan Chatbot & Monitoring Darurat aktif 24/7)\n\n📍 *Alamat Kantor:* \nSilakan hubungi tim kami untuk jadwal kunjungan atau temu langsung.',
+			'Hubungi Tim Customer Service (CS) Manusia', 'cs,agen,manusia,bantuan,komplain,keluhan,kendala,bicara', 'Pesan Anda telah kami teruskan ke agen Customer Service (CS) manusia kami. Mohon ditunggu sebentar ya!',
+			'Baik {name}, pertanyaan Anda memerlukan penanganan langsung dari tim Customer Service (CS) kami. 👨‍💼👩‍💼\n\nPesan Anda telah kami alihkan ke agen manusia kami dan tim kami sudah menerima notifikasi prioritas untuk segera membalas percakapan ini.\n\nMohon ditunggu sebentar ya kak, agen CS kami akan segera bergabung dalam obrolan ini! 🙏',
+			'[]'::jsonb, NOW(), NOW()
+		)
+		ON CONFLICT (workspace_id) DO NOTHING
+		RETURNING 
+			id, workspace_id, bot_enabled, bot_name, greeting_message,
+			menu_1_title, menu_1_keywords, menu_1_response,
+			menu_2_title, menu_2_keywords, menu_2_response,
+			menu_3_title, menu_3_keywords, menu_3_response,
+			menu_4_title, menu_4_keywords, menu_4_response,
+			handoff_message, custom_faqs, created_at, updated_at
+	`
+	err = r.db.Get(&settings, insertQuery, workspaceID)
+	if err == nil {
+		return &settings, nil
+	}
+
+	// Retry get in case conflict occurred
+	err = r.db.Get(&settings, query, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	return &settings, nil
+}
+
+// UpdateWorkspaceBotSettings updates chatbot templates and settings for a company/workspace
+func (r *InboxRepository) UpdateWorkspaceBotSettings(workspaceID string, req *domain.UpdateBotSettingsRequest) (*domain.WorkspaceBotSettings, error) {
+	current, err := r.GetWorkspaceBotSettings(workspaceID)
+	if err != nil {
+		return nil, err
+	}
+
+	if req.BotEnabled != nil {
+		current.BotEnabled = *req.BotEnabled
+	}
+	if req.BotName != nil && *req.BotName != "" {
+		current.BotName = *req.BotName
+	}
+	if req.GreetingMessage != nil && *req.GreetingMessage != "" {
+		current.GreetingMessage = *req.GreetingMessage
+	}
+	if req.Menu1Title != nil && *req.Menu1Title != "" {
+		current.Menu1Title = *req.Menu1Title
+	}
+	if req.Menu1Keywords != nil {
+		current.Menu1Keywords = *req.Menu1Keywords
+	}
+	if req.Menu1Response != nil && *req.Menu1Response != "" {
+		current.Menu1Response = *req.Menu1Response
+	}
+	if req.Menu2Title != nil && *req.Menu2Title != "" {
+		current.Menu2Title = *req.Menu2Title
+	}
+	if req.Menu2Keywords != nil {
+		current.Menu2Keywords = *req.Menu2Keywords
+	}
+	if req.Menu2Response != nil && *req.Menu2Response != "" {
+		current.Menu2Response = *req.Menu2Response
+	}
+	if req.Menu3Title != nil && *req.Menu3Title != "" {
+		current.Menu3Title = *req.Menu3Title
+	}
+	if req.Menu3Keywords != nil {
+		current.Menu3Keywords = *req.Menu3Keywords
+	}
+	if req.Menu3Response != nil && *req.Menu3Response != "" {
+		current.Menu3Response = *req.Menu3Response
+	}
+	if req.Menu4Title != nil && *req.Menu4Title != "" {
+		current.Menu4Title = *req.Menu4Title
+	}
+	if req.Menu4Keywords != nil {
+		current.Menu4Keywords = *req.Menu4Keywords
+	}
+	if req.Menu4Response != nil && *req.Menu4Response != "" {
+		current.Menu4Response = *req.Menu4Response
+	}
+	if req.HandoffMessage != nil && *req.HandoffMessage != "" {
+		current.HandoffMessage = *req.HandoffMessage
+	}
+	if req.CustomFAQs != nil {
+		current.CustomFAQs = req.CustomFAQs
+	}
+
+	updateQuery := `
+		UPDATE workspace_bot_settings SET
+			bot_enabled = $1,
+			bot_name = $2,
+			greeting_message = $3,
+			menu_1_title = $4,
+			menu_1_keywords = $5,
+			menu_1_response = $6,
+			menu_2_title = $7,
+			menu_2_keywords = $8,
+			menu_2_response = $9,
+			menu_3_title = $10,
+			menu_3_keywords = $11,
+			menu_3_response = $12,
+			menu_4_title = $13,
+			menu_4_keywords = $14,
+			menu_4_response = $15,
+			handoff_message = $16,
+			custom_faqs = $17,
+			updated_at = NOW()
+		WHERE workspace_id = $18
+		RETURNING 
+			id, workspace_id, bot_enabled, bot_name, greeting_message,
+			menu_1_title, menu_1_keywords, menu_1_response,
+			menu_2_title, menu_2_keywords, menu_2_response,
+			menu_3_title, menu_3_keywords, menu_3_response,
+			menu_4_title, menu_4_keywords, menu_4_response,
+			handoff_message, custom_faqs, created_at, updated_at
+	`
+	var updated domain.WorkspaceBotSettings
+	err = r.db.Get(&updated, updateQuery,
+		current.BotEnabled,
+		current.BotName,
+		current.GreetingMessage,
+		current.Menu1Title,
+		current.Menu1Keywords,
+		current.Menu1Response,
+		current.Menu2Title,
+		current.Menu2Keywords,
+		current.Menu2Response,
+		current.Menu3Title,
+		current.Menu3Keywords,
+		current.Menu3Response,
+		current.Menu4Title,
+		current.Menu4Keywords,
+		current.Menu4Response,
+		current.HandoffMessage,
+		current.CustomFAQs,
+		workspaceID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &updated, nil
+}

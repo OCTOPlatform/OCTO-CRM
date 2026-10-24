@@ -36,6 +36,7 @@ import {
   InboxAuditEvent,
   NotificationItem,
   NotificationListResponse,
+  WorkspaceBotSettings,
 } from '@/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
@@ -617,6 +618,17 @@ class ApiClient {
     return this.request<void>(`/workspaces/${wsId}/conversations/${convId}/bot`, {
       method: 'PATCH',
       body: JSON.stringify({ bot_active: botActive, reason }),
+    });
+  }
+
+  async getBotSettings(wsId: string): Promise<WorkspaceBotSettings> {
+    return this.request<WorkspaceBotSettings>(`/workspaces/${wsId}/bot/settings`);
+  }
+
+  async updateBotSettings(wsId: string, data: Partial<WorkspaceBotSettings>): Promise<WorkspaceBotSettings> {
+    return this.request<WorkspaceBotSettings>(`/workspaces/${wsId}/bot/settings`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
     });
   }
 

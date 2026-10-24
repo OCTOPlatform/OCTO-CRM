@@ -173,6 +173,50 @@ type ToggleBotRequest struct {
 	Reason    string `json:"reason,omitempty"`
 }
 
+type WorkspaceBotSettings struct {
+	ID              string          `json:"id" db:"id"`
+	WorkspaceID     string          `json:"workspace_id" db:"workspace_id"`
+	BotEnabled      bool            `json:"bot_enabled" db:"bot_enabled"`
+	BotName         string          `json:"bot_name" db:"bot_name"`
+	GreetingMessage string          `json:"greeting_message" db:"greeting_message"`
+	Menu1Title      string          `json:"menu_1_title" db:"menu_1_title"`
+	Menu1Keywords   string          `json:"menu_1_keywords" db:"menu_1_keywords"`
+	Menu1Response   string          `json:"menu_1_response" db:"menu_1_response"`
+	Menu2Title      string          `json:"menu_2_title" db:"menu_2_title"`
+	Menu2Keywords   string          `json:"menu_2_keywords" db:"menu_2_keywords"`
+	Menu2Response   string          `json:"menu_2_response" db:"menu_2_response"`
+	Menu3Title      string          `json:"menu_3_title" db:"menu_3_title"`
+	Menu3Keywords   string          `json:"menu_3_keywords" db:"menu_3_keywords"`
+	Menu3Response   string          `json:"menu_3_response" db:"menu_3_response"`
+	Menu4Title      string          `json:"menu_4_title" db:"menu_4_title"`
+	Menu4Keywords   string          `json:"menu_4_keywords" db:"menu_4_keywords"`
+	Menu4Response   string          `json:"menu_4_response" db:"menu_4_response"`
+	HandoffMessage  string          `json:"handoff_message" db:"handoff_message"`
+	CustomFAQs      json.RawMessage `json:"custom_faqs" db:"custom_faqs"`
+	CreatedAt       time.Time       `json:"created_at" db:"created_at"`
+	UpdatedAt       time.Time       `json:"updated_at" db:"updated_at"`
+}
+
+type UpdateBotSettingsRequest struct {
+	BotEnabled      *bool           `json:"bot_enabled"`
+	BotName         *string         `json:"bot_name"`
+	GreetingMessage *string         `json:"greeting_message"`
+	Menu1Title      *string         `json:"menu_1_title"`
+	Menu1Keywords   *string         `json:"menu_1_keywords"`
+	Menu1Response   *string         `json:"menu_1_response"`
+	Menu2Title      *string         `json:"menu_2_title"`
+	Menu2Keywords   *string         `json:"menu_2_keywords"`
+	Menu2Response   *string         `json:"menu_2_response"`
+	Menu3Title      *string         `json:"menu_3_title"`
+	Menu3Keywords   *string         `json:"menu_3_keywords"`
+	Menu3Response   *string         `json:"menu_3_response"`
+	Menu4Title      *string         `json:"menu_4_title"`
+	Menu4Keywords   *string         `json:"menu_4_keywords"`
+	Menu4Response   *string         `json:"menu_4_response"`
+	HandoffMessage  *string         `json:"handoff_message"`
+	CustomFAQs      json.RawMessage `json:"custom_faqs"`
+}
+
 type WorkspaceChannel struct {
 	ID               string          `json:"id" db:"id"`
 	WorkspaceID      string          `json:"workspace_id" db:"workspace_id"`

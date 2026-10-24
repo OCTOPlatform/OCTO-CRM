@@ -4,27 +4,30 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Workspace } from '@/types';
 import { api } from './api';
 
-export type UserRoleProfile = 'owner' | 'supervisor' | 'sales' | 'support';
+export type UserRoleProfile = 'owner' | 'admin' | 'supervisor' | 'member' | 'sales' | 'support';
 
 export const resolveRoleProfile = (ws: Workspace | null): UserRoleProfile => {
   if (!ws) return 'owner';
   const role = (ws.role || '').toLowerCase();
   const dept = (ws.department || '').toLowerCase();
 
-  // Owner or Admin gets full executive access
-  if (role === 'owner' || role === 'admin') {
+  // Owner gets full executive access
+  if (role === 'owner') {
     return 'owner';
   }
-  // Supervisor gets team monitoring & governance access
-  if (role === 'supervisor') {
-    return 'supervisor';
+  // Admin / Supervisor gets lead management access
+  if (role === 'admin' || role === 'supervisor') {
+    return 'admin';
   }
   // CS / Support department
   if (dept === 'support') {
     return 'support';
   }
-  // Sales / Pre-sales department
-  return 'sales';
+  // Sales department
+  if (dept === 'sales') {
+    return 'sales';
+  }
+  return 'member';
 };
 
 interface AuthContextType {

@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "octo-crm-collection-v1",
     "name": "OCTO CRM API Collection",
-    "description": "Complete Postman collection for OCTO CRM (Know Your Customers. Grow Your Relationships.) with multi-tenant workspace support, contact deduplication, sales pipeline & kanban, task management, CSV import/export, and reports.",
+    "description": "Koleksi API Lengkap OCTO-CRM (Omnichannel WhatsApp, Multi-Tenant Chatbot, Helpdesk SLA, Inbound Leads Webhook, Pipeline Deals, CPQ, Broadcast, AI Copilot, dan RBAC Governance).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -39,10 +39,15 @@
             }
           ],
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -50,8 +55,15 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/auth/register",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "auth", "register"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
             }
           }
         },
@@ -75,10 +87,15 @@
             }
           ],
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -86,8 +103,15 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/auth/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "auth", "login"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
             }
           }
         },
@@ -98,8 +122,15 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/auth/me",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "auth", "me"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "me"
+              ]
             }
           }
         },
@@ -108,7 +139,10 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -116,8 +150,15 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/auth/profile",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "auth", "profile"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "profile"
+              ]
             }
           }
         }
@@ -133,8 +174,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/workspaces",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "workspaces"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces"
+              ]
             }
           }
         },
@@ -143,7 +190,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -151,8 +201,14 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/workspaces",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "workspaces"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces"
+              ]
             }
           }
         },
@@ -163,8 +219,15 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "workspaces", "{{workspaceId}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}"
+              ]
             }
           }
         },
@@ -173,7 +236,10 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -181,8 +247,15 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "workspaces", "{{workspaceId}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}"
+              ]
             }
           }
         },
@@ -193,8 +266,16 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/members",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "workspaces", "{{workspaceId}}", "members"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "members"
+              ]
             }
           }
         },
@@ -203,7 +284,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -211,8 +295,16 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/members",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "workspaces", "{{workspaceId}}", "members"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "members"
+              ]
             }
           }
         }
@@ -228,14 +320,37 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/contacts?page=1&per_page=10&query=&lead_source=&tag=",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "workspaces", "{{workspaceId}}", "contacts"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "contacts"
+              ],
               "query": [
-                { "key": "page", "value": "1" },
-                { "key": "per_page", "value": "10" },
-                { "key": "query", "value": "" },
-                { "key": "lead_source", "value": "" },
-                { "key": "tag", "value": "" }
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "per_page",
+                  "value": "10"
+                },
+                {
+                  "key": "query",
+                  "value": ""
+                },
+                {
+                  "key": "lead_source",
+                  "value": ""
+                },
+                {
+                  "key": "tag",
+                  "value": ""
+                }
               ]
             }
           }
@@ -247,8 +362,17 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/contacts/{{contactId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "workspaces", "{{workspaceId}}", "contacts", "{{contactId}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "contacts",
+                "{{contactId}}"
+              ]
             }
           }
         },
@@ -257,7 +381,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -265,8 +392,16 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/contacts",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "workspaces", "{{workspaceId}}", "contacts"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "contacts"
+              ]
             }
           }
         },
@@ -275,7 +410,10 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -283,8 +421,17 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/contacts/{{contactId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "workspaces", "{{workspaceId}}", "contacts", "{{contactId}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "contacts",
+                "{{contactId}}"
+              ]
             }
           }
         },
@@ -295,8 +442,17 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/contacts/duplicates",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "workspaces", "{{workspaceId}}", "contacts", "duplicates"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "contacts",
+                "duplicates"
+              ]
             }
           }
         },
@@ -305,7 +461,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -313,8 +472,17 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/contacts/merge",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "workspaces", "{{workspaceId}}", "contacts", "merge"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "contacts",
+                "merge"
+              ]
             }
           }
         },
@@ -325,8 +493,17 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/contacts/export",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "workspaces", "{{workspaceId}}", "contacts", "export"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "contacts",
+                "export"
+              ]
             }
           }
         },
@@ -335,7 +512,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -343,8 +523,17 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/contacts/import-commit",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "workspaces", "{{workspaceId}}", "contacts", "import-commit"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "contacts",
+                "import-commit"
+              ]
             }
           }
         }
@@ -360,8 +549,16 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/companies",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "workspaces", "{{workspaceId}}", "companies"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "companies"
+              ]
             }
           }
         },
@@ -370,7 +567,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -378,8 +578,16 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/companies",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "workspaces", "{{workspaceId}}", "companies"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "companies"
+              ]
             }
           }
         },
@@ -390,8 +598,17 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/companies/{{companyId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "workspaces", "{{workspaceId}}", "companies", "{{companyId}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "companies",
+                "{{companyId}}"
+              ]
             }
           }
         }
@@ -407,8 +624,16 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/pipelines",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "workspaces", "{{workspaceId}}", "pipelines"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "pipelines"
+              ]
             }
           }
         },
@@ -419,8 +644,16 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/deals",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "workspaces", "{{workspaceId}}", "deals"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "deals"
+              ]
             }
           }
         },
@@ -429,7 +662,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -437,8 +673,16 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/deals",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "workspaces", "{{workspaceId}}", "deals"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "deals"
+              ]
             }
           }
         },
@@ -449,8 +693,17 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/deals/{{dealId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "workspaces", "{{workspaceId}}", "deals", "{{dealId}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "deals",
+                "{{dealId}}"
+              ]
             }
           }
         },
@@ -459,7 +712,10 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -467,8 +723,18 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/deals/{{dealId}}/stage",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "workspaces", "{{workspaceId}}", "deals", "{{dealId}}", "stage"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "deals",
+                "{{dealId}}",
+                "stage"
+              ]
             }
           }
         },
@@ -477,7 +743,10 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -485,8 +754,18 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/deals/{{dealId}}/stage",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "workspaces", "{{workspaceId}}", "deals", "{{dealId}}", "stage"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "deals",
+                "{{dealId}}",
+                "stage"
+              ]
             }
           }
         }
@@ -502,8 +781,16 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/tasks",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "workspaces", "{{workspaceId}}", "tasks"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "tasks"
+              ]
             }
           }
         },
@@ -514,10 +801,21 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/tasks?due_filter=overdue",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "workspaces", "{{workspaceId}}", "tasks"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "tasks"
+              ],
               "query": [
-                { "key": "due_filter", "value": "overdue" }
+                {
+                  "key": "due_filter",
+                  "value": "overdue"
+                }
               ]
             }
           }
@@ -529,10 +827,21 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/tasks?due_filter=today",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "workspaces", "{{workspaceId}}", "tasks"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "tasks"
+              ],
               "query": [
-                { "key": "due_filter", "value": "today" }
+                {
+                  "key": "due_filter",
+                  "value": "today"
+                }
               ]
             }
           }
@@ -542,7 +851,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -550,8 +862,16 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/tasks",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "workspaces", "{{workspaceId}}", "tasks"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "tasks"
+              ]
             }
           }
         },
@@ -562,8 +882,18 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/tasks/11111111-1111-1111-1111-111111111111/toggle",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "workspaces", "{{workspaceId}}", "tasks", "11111111-1111-1111-1111-111111111111", "toggle"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "tasks",
+                "11111111-1111-1111-1111-111111111111",
+                "toggle"
+              ]
             }
           }
         }
@@ -579,10 +909,22 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/activities/recent?limit=10",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "workspaces", "{{workspaceId}}", "activities", "recent"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "activities",
+                "recent"
+              ],
               "query": [
-                { "key": "limit", "value": "10" }
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
               ]
             }
           }
@@ -594,8 +936,18 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/contacts/{{contactId}}/activities",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "workspaces", "{{workspaceId}}", "contacts", "{{contactId}}", "activities"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "contacts",
+                "{{contactId}}",
+                "activities"
+              ]
             }
           }
         },
@@ -604,7 +956,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -612,8 +967,16 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/activities",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "workspaces", "{{workspaceId}}", "activities"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "activities"
+              ]
             }
           }
         }
@@ -629,8 +992,17 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/reports/summary",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "workspaces", "{{workspaceId}}", "reports", "summary"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "reports",
+                "summary"
+              ]
             }
           }
         },
@@ -641,8 +1013,17 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/reports/funnel",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "workspaces", "{{workspaceId}}", "reports", "funnel"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "reports",
+                "funnel"
+              ]
             }
           }
         },
@@ -653,8 +1034,17 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/reports/lead-sources",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "workspaces", "{{workspaceId}}", "reports", "lead-sources"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "reports",
+                "lead-sources"
+              ]
             }
           }
         },
@@ -665,8 +1055,17 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/reports/activities",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "workspaces", "{{workspaceId}}", "reports", "activities"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "reports",
+                "activities"
+              ]
             }
           }
         },
@@ -677,13 +1076,1380 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/reports/audit-logs?limit=50",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "workspaces", "{{workspaceId}}", "reports", "audit-logs"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "reports",
+                "audit-logs"
+              ],
               "query": [
-                { "key": "limit", "value": "50" }
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
               ]
             }
           }
+        }
+      ]
+    },
+    {
+      "name": "09. Omnichannel Live Chat & WhatsApp Inbox",
+      "item": [
+        {
+          "name": "List Conversations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/conversations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "conversations"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Conversation Detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/conversations/{{conversationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "conversations",
+                "{{conversationId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Conversation Messages",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/conversations/{{conversationId}}/messages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "conversations",
+                "{{conversationId}}",
+                "messages"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Send Reply Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/conversations/{{conversationId}}/messages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "conversations",
+                "{{conversationId}}",
+                "messages"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Halo Kak, perkenalkan saya agen CS yang membantu penanganan kendala Anda.\",\n  \"channel\": \"whatsapp\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Toggle Chatbot Status (Active/Inactive)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/conversations/{{conversationId}}/bot",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "conversations",
+                "{{conversationId}}",
+                "bot"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bot_active\": false,\n  \"reason\": \"Diambil alih oleh agen CS manusia\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "CS Takeover Conversation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/conversations/{{conversationId}}/takeover",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "conversations",
+                "{{conversationId}}",
+                "takeover"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Penanganan komplain pelanggan prioritas\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Escalate Conversation to Supervisor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/conversations/{{conversationId}}/escalate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "conversations",
+                "{{conversationId}}",
+                "escalate"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"escalate_to_id\": \"11111111-1111-1111-1111-111111111111\",\n  \"reason\": \"Kendala integrasi memerlukan persetujuan supervisor\",\n  \"priority\": \"urgent\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Conversation Priority",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/conversations/{{conversationId}}/priority",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "conversations",
+                "{{conversationId}}",
+                "priority"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"priority\": \"urgent\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Conversation Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/conversations/{{conversationId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "conversations",
+                "{{conversationId}}",
+                "status"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"closed\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Assign Conversation to Agent",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/conversations/{{conversationId}}/assign",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "conversations",
+                "{{conversationId}}",
+                "assign"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assigned_to_id\": \"11111111-1111-1111-1111-111111111111\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Convert Chat to Deal",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/conversations/{{conversationId}}/convert-to-deal",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "conversations",
+                "{{conversationId}}",
+                "convert-to-deal"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Deal Penawaran Baru dari Chat WA\",\n  \"value\": 15000000,\n  \"pipeline_id\": \"0c700000-0000-0000-0000-000000000002\",\n  \"stage_id\": \"0c700000-0000-0000-0000-000000000003\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Stream Real-Time SSE Events",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/inbox/events",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "inbox",
+                "events"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Sync WhatsApp History",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/inbox/whatsapp-sync-history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "inbox",
+                "whatsapp-sync-history"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get WhatsApp Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/inbox/whatsapp-status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "inbox",
+                "whatsapp-status"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get WhatsApp QR Code",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/inbox/whatsapp-qr",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "inbox",
+                "whatsapp-qr"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Restart WhatsApp Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/inbox/whatsapp-restart",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "inbox",
+                "whatsapp-restart"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "10. Helpdesk Tickets & SLA Governance",
+      "item": [
+        {
+          "name": "List Tickets",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/tickets",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "tickets"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Ticket",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/tickets",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "tickets"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subject\": \"Kendala Scanner Rusak dan Tidak Terdeteksi\",\n  \"description\": \"Perangkat scanner kasir error tidak membaca barcode sejak pagi hari.\",\n  \"contact_id\": \"{{contactId}}\",\n  \"priority\": \"urgent\",\n  \"channel\": \"whatsapp\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Ticket Detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/tickets/{{ticketId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "tickets",
+                "{{ticketId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Ticket Status & Priority",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/tickets/{{ticketId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "tickets",
+                "{{ticketId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"in_progress\",\n  \"priority\": \"high\",\n  \"assigned_to_id\": \"11111111-1111-1111-1111-111111111111\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Internal Note to Ticket",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/tickets/{{ticketId}}/notes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "tickets",
+                "{{ticketId}}",
+                "notes"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": \"Sudah dicek oleh tim teknisi lapangan, sparepart pengganti sedang dipersiapkan.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Support SLA Metrics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/reports/support",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "reports",
+                "support"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Check SLA Escalation Auto-Job",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/tickets/check-sla",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "tickets",
+                "check-sla"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "11. Multi-Tenant Chatbot & Auto-Reply",
+      "item": [
+        {
+          "name": "Get Workspace Chatbot Settings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/bot/settings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "bot",
+                "settings"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Workspace Chatbot Settings & Templates",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/bot/settings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "bot",
+                "settings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bot_enabled\": true,\n  \"bot_name\": \"Asisten Pintar PT Maju Bersama\",\n  \"greeting_message\": \"Halo {name}! \\ud83d\\udc4b Selamat datang di Layanan Pelanggan {company}.\\n\\nSaya Asisten Virtual 24/7. Silakan pilih menu:\\n1\\ufe0f\\u20e3 {menu_1_title}\\n2\\ufe0f\\u20e3 {menu_2_title}\\n3\\ufe0f\\u20e3 {menu_3_title}\\n4\\ufe0f\\u20e3 {menu_4_title}\",\n  \"menu_1_title\": \"Informasi Produk & Layanan\",\n  \"menu_1_keywords\": \"produk,fitur,layanan,keunggulan\",\n  \"menu_1_response\": \"Kami menyediakan solusi CRM All-in-One dan WhatsApp Omnichannel terbaik.\",\n  \"menu_2_title\": \"Paket Harga & Penawaran\",\n  \"menu_2_keywords\": \"harga,paket,biaya,tarif,langganan\",\n  \"menu_2_response\": \"Tersedia paket Starter, Business, dan Enterprise sesuai kebutuhan Anda.\",\n  \"menu_3_title\": \"Jam Operasional & Alamat Kantor\",\n  \"menu_3_keywords\": \"jam operasional,jam kerja,alamat,kantor\",\n  \"menu_3_response\": \"Jam kerja kami: Senin - Jumat 08:00 - 18:00 WIB di Jakarta.\",\n  \"menu_4_title\": \"Hubungi Tim CS Manusia\",\n  \"menu_4_keywords\": \"cs,agen,manusia,bantuan,komplain\",\n  \"menu_4_response\": \"Pesan Anda segera dialihkan ke tim Customer Service kami.\",\n  \"handoff_message\": \"Baik {name}, pertanyaan Anda kami alihkan ke agen CS manusia. Mohon ditunggu sebentar ya!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "12. Ecosystem Inbound Lead Intake (Website Webhook)",
+      "item": [
+        {
+          "name": "Ingest Website Form Lead (Atomic 3-in-1)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/integrations/lead-intake",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "integrations",
+                "lead-intake"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Budi Santoso\",\n  \"phone\": \"+6281295099738\",\n  \"email\": \"budi.santoso@rejeki.com\",\n  \"company_name\": \"PT Sumber Rejeki Abadi\",\n  \"company_size\": \"11-50\",\n  \"product_interest\": \"Renovasi Kantor & Interior\",\n  \"form_type\": \"Website Contact Form\",\n  \"message\": \"Halo tim Maju Bersama, saya butuh penawaran renovasi kantor di BSD.\",\n  \"utm_source\": \"google-ads\",\n  \"utm_campaign\": \"promo-interior-bsd\",\n  \"consent_given\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "13. Notifications & Real-Time Alerts",
+      "item": [
+        {
+          "name": "List Notifications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/notifications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "notifications"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Mark Notification as Read",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/notifications/{{notificationId}}/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "notifications",
+                "{{notificationId}}",
+                "read"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Mark All Notifications as Read",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/notifications/mark-all-read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "notifications",
+                "mark-all-read"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "14. Team Monitoring & Audit Governance",
+      "item": [
+        {
+          "name": "Get Team Monitoring & SLA Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/inbox/monitoring-stats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "inbox",
+                "monitoring-stats"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Inbox Audit Trail Logs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/inbox/audit-trail",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "inbox",
+                "audit-trail"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Log Conversation Access Reason",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/conversations/{{conversationId}}/log-access",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "conversations",
+                "{{conversationId}}",
+                "log-access"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Audit kepatuhan SLA oleh supervisor\",\n  \"purpose\": \"Supervisi respons agen\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "15. AI Copilot (Summarize & Smart Replies)",
+      "item": [
+        {
+          "name": "Summarize Chat Conversation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/ai/summarize-chat",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "ai",
+                "summarize-chat"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"conversation_id\": \"{{conversationId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Suggest Smart Reply Templates",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/ai/suggest-replies",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "ai",
+                "suggest-replies"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"conversation_id\": \"{{conversationId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "16. CPQ Quotations & WhatsApp Broadcast",
+      "item": [
+        {
+          "name": "Create Quotation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/quotations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "quotations"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deal_id\": \"{{dealId}}\",\n  \"title\": \"Penawaran Paket Interior Kantor\",\n  \"items\": [\n    {\n      \"description\": \"Desain Interior 3D\",\n      \"quantity\": 1,\n      \"unit_price\": 5000000\n    },\n    {\n      \"description\": \"Fit-out & Partisi Kaca\",\n      \"quantity\": 10,\n      \"unit_price\": 1200000\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Quotations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/quotations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "quotations"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create WhatsApp Broadcast Campaign",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/broadcasts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "broadcasts"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Promo Akhir Tahun Pelanggan VIP\",\n  \"message_template\": \"Halo {name}! Dapatkan diskon 20% untuk pemesanan sebelum akhir bulan.\",\n  \"target_filter\": {\n    \"tag\": \"VIP\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Broadcast Campaigns",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workspaces/{{workspaceId}}/broadcasts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workspaces",
+                "{{workspaceId}}",
+                "broadcasts"
+              ]
+            }
+          },
+          "response": []
         }
       ]
     }

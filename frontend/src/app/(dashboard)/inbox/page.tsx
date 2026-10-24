@@ -48,6 +48,7 @@ import {
   ShieldAlert,
   CheckCircle,
   XCircle,
+  Settings,
   ExternalLink,
   Sparkles,
   Info,
@@ -84,6 +85,7 @@ import {
 
 export default function InboxPage() {
   const { currentWorkspace, user, activeRole } = useAuth();
+  const isSupervisorOrAdmin = activeRole === 'admin' || activeRole === 'supervisor' || activeRole === 'owner' || Boolean(user?.is_superadmin);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -1771,6 +1773,17 @@ export default function InboxPage() {
                       <Bot className="w-3.5 h-3.5 text-slate-500" />
                       <span className="hidden sm:inline">Aktifkan Bot</span>
                     </button>
+                  )}
+
+                  {isSupervisorOrAdmin && (
+                    <Link
+                      href="/settings?tab=chatbot"
+                      className="px-2 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-[#00AFC4] text-xs font-bold border border-teal-200 transition flex items-center gap-1 cursor-pointer shadow-2xs"
+                      title="Kelola & Sesuaikan Template Chatbot Perusahaan (Khusus Admin/Owner)"
+                    >
+                      <Settings className="w-3.5 h-3.5" />
+                      <span className="hidden md:inline">Template Bot</span>
+                    </Link>
                   )}
 
                   <button

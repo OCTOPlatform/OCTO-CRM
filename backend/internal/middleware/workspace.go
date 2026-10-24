@@ -87,8 +87,20 @@ func RequireRole(allowedRoles ...domain.Role) gin.HandlerFunc {
 		}
 		userRole := roleVal.(domain.Role)
 
+		// Owner always inherits Admin privileges
+		if userRole == domain.RoleOwner {
+			c.Next()
+			return
+		}
+
+		// Normalize supervisor to admin
+		effectiveRole := userRole
+		if effectiveRole == domain.RoleSupervisor {
+			effectiveRole = domain.RoleAdmin
+		}
+
 		for _, r := range allowedRoles {
-			if userRole == r {
+			if effectiveRole == r {
 				c.Next()
 				return
 			}

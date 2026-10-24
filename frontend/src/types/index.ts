@@ -637,4 +637,33 @@ export interface AISuggestionResponse {
   detected_intent: string;
 }
 
+export interface CustomFAQItem {
+  keywords: string;
+  response: string;
+}
+
+export interface WorkspaceBotSettings {
+  id: string;
+  workspace_id: string;
+  bot_enabled: boolean;
+  bot_name: string;
+  greeting_message: string;
+  menu_1_title: string;
+  menu_1_keywords: string;
+  menu_1_response: string;
+  menu_2_title: string;
+  menu_2_keywords: string;
+  menu_2_response: string;
+  menu_3_title: string;
+  menu_3_keywords: string;
+  menu_3_response: string;
+  menu_4_title: string;
+  menu_4_keywords: string;
+  menu_4_response: string;
+  handoff_message: string;
+  custom_faqs?: CustomFAQItem[] | any;
+  created_at: string;
+  updated_at: string;
+}
+
 

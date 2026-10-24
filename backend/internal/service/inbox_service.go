@@ -1017,10 +1017,27 @@ func (s *InboxService) ToggleBot(workspaceID, conversationID string, botActive b
 	return err
 }
 
+// GetBotSettings returns the chatbot configuration for a specific workspace
+func (s *InboxService) GetBotSettings(workspaceID string) (*domain.WorkspaceBotSettings, error) {
+	return s.inboxRepo.GetWorkspaceBotSettings(workspaceID)
+}
+
+// UpdateBotSettings updates the chatbot templates and rules for a workspace
+func (s *InboxService) UpdateBotSettings(workspaceID string, req *domain.UpdateBotSettingsRequest) (*domain.WorkspaceBotSettings, error) {
+	return s.inboxRepo.UpdateWorkspaceBotSettings(workspaceID, req)
+}
+
 // ProcessBotReply handles 24/7 intelligent automated greeting, menu navigation, FAQ answers,
 // and seamless handoff to human CS agents with real-time alerting when questions require human help.
 func (s *InboxService) ProcessBotReply(workspaceID string, conv *domain.Conversation, customerMsg *domain.Message, senderName string) {
 	time.Sleep(800 * time.Millisecond) // realistic natural reply delay
+
+	// 1. Fetch company-specific chatbot settings
+	settings, err := s.inboxRepo.GetWorkspaceBotSettings(workspaceID)
+	if err == nil && settings != nil && !settings.BotEnabled {
+		// Bot is disabled by company admin
+		return
+	}
 
 	content := strings.TrimSpace(customerMsg.Content)
 	text := strings.ToLower(content)
@@ -1030,41 +1047,123 @@ func (s *InboxService) ProcessBotReply(workspaceID string, conv *domain.Conversa
 		displayName = "Kak"
 	}
 
+	// Resolve company name
+	companyName := "OCTO-CRM"
+	if ws, _ := s.userRepo.GetWorkspaceByID(workspaceID); ws != nil && ws.Name != "" {
+		companyName = ws.Name
+	}
+
+	botSenderName := "Asisten Virtual"
+	if settings != nil && settings.BotName != "" {
+		botSenderName = settings.BotName
+	}
+
+	// Helper to interpolate placeholders
+	interpolate := func(tmpl string) string {
+		out := strings.ReplaceAll(tmpl, "{name}", displayName)
+		out = strings.ReplaceAll(out, "{company}", companyName)
+		if settings != nil {
+			out = strings.ReplaceAll(out, "{menu_1_title}", settings.Menu1Title)
+			out = strings.ReplaceAll(out, "{menu_2_title}", settings.Menu2Title)
+			out = strings.ReplaceAll(out, "{menu_3_title}", settings.Menu3Title)
+			out = strings.ReplaceAll(out, "{menu_4_title}", settings.Menu4Title)
+		}
+		return out
+	}
+
+	matchKeywords := func(csvKeywords string) bool {
+		if csvKeywords == "" {
+			return false
+		}
+		for _, kw := range strings.Split(csvKeywords, ",") {
+			kw = strings.TrimSpace(strings.ToLower(kw))
+			if kw != "" && strings.Contains(text, kw) {
+				return true
+			}
+		}
+		return false
+	}
+
 	var botReply string
 	isHandoff := false
 	handoffReason := ""
 
-	// Check menu / greetings / keywords
-	if text == "menu" || text == "bantuan" || text == "info" || text == "help" ||
+	// Check custom FAQs first if configured
+	customFAQMatched := false
+	if settings != nil && len(settings.CustomFAQs) > 2 {
+		var faqs []struct {
+			Keywords string `json:"keywords"`
+			Response string `json:"response"`
+		}
+		if json.Unmarshal(settings.CustomFAQs, &faqs) == nil {
+			for _, item := range faqs {
+				if matchKeywords(item.Keywords) {
+					botReply = interpolate(item.Response)
+					customFAQMatched = true
+					break
+				}
+			}
+		}
+	}
+
+	if customFAQMatched {
+		// Custom FAQ reply
+	} else if text == "menu" || text == "bantuan" || text == "info" || text == "help" ||
 		text == "halo" || text == "hi" || text == "hai" || text == "halo bot" ||
 		text == "pagi" || text == "siang" || text == "sore" || text == "malam" ||
 		text == "assalamualaikum" || text == "permisi" || text == "tes" || text == "test" ||
 		text == "halo admin" || text == "start" {
-		botReply = fmt.Sprintf("Halo %s! 👋 Selamat datang di Layanan Pelanggan OCTO-CRM.\n\nSaya adalah Asisten Virtual Otomatis OCTO. Saya siap membantu Anda 24/7. Silakan pilih menu informasi berikut:\n\n1️⃣ *Informasi Produk & Fitur CRM*\n2️⃣ *Paket Harga & Langganan*\n3️⃣ *Jam Operasional & Alamat Kantor*\n4️⃣ *Hubungi Tim Customer Service (CS) Manusia*\n\nSilakan ketik nomor (1-4) atau tuliskan pertanyaan Anda langsung ya!", displayName)
+		if settings != nil && settings.GreetingMessage != "" {
+			botReply = interpolate(settings.GreetingMessage)
+		} else {
+			botReply = fmt.Sprintf("Halo %s! 👋 Selamat datang di Layanan Pelanggan %s.\n\nSaya adalah Asisten Virtual Otomatis. Saya siap membantu Anda 24/7. Silakan pilih menu informasi berikut:\n\n1️⃣ Informasi Produk & Layanan\n2️⃣ Paket Harga & Penawaran\n3️⃣ Jam Operasional & Alamat Kantor\n4️⃣ Hubungi Tim Customer Service (CS) Manusia\n\nSilakan ketik nomor (1-4) atau tuliskan pertanyaan Anda langsung ya!", displayName, companyName)
+		}
 
-	} else if text == "1" || strings.Contains(text, "produk") || strings.Contains(text, "fitur") ||
-		strings.Contains(text, "keunggulan") || strings.Contains(text, "layanan") ||
-		strings.Contains(text, "apa itu crm") || strings.Contains(text, "kemampuan") {
-		botReply = "OCTO-CRM adalah platform All-in-One CRM & Omnichannel WhatsApp untuk akselerasi bisnis Anda:\n\n✨ *WhatsApp Multi-Agent:* 1 nomor WhatsApp resmi dapat diakses bersama oleh seluruh tim CS & Sales tanpa saling bentrok.\n✨ *Live Chat & Omnichannel Inbox:* Terintegrasi WhatsApp dan Email dalam satu layar terpadu.\n✨ *Kanban Sales Pipeline & Deals:* Pantau peluang omzet dari prospek hingga deal won.\n✨ *Helpdesk & SLA Tickets:* Manajemen keluhan dan eskalasi purna jual terukur.\n✨ *AI Sales & CS Copilot:* Rekomendasi balasan cepat dan ringkasan chat otomatis.\n\nKetik *2* untuk melihat paket harga, atau ketik *CS* jika ingin berbicara langsung dengan tim kami!"
+	} else if text == "1" || (settings != nil && matchKeywords(settings.Menu1Keywords)) ||
+		strings.Contains(text, "produk") || strings.Contains(text, "fitur") || strings.Contains(text, "layanan") {
+		if settings != nil && settings.Menu1Response != "" {
+			botReply = interpolate(settings.Menu1Response)
+		} else {
+			botReply = fmt.Sprintf("Berikut adalah informasi produk dan layanan unggulan dari %s. Kami berkomitmen memberikan solusi terbaik untuk kebutuhan Anda.\n\nKetik *2* untuk melihat paket harga, atau ketik *CS* jika ingin berbicara langsung dengan tim kami!", companyName)
+		}
 
-	} else if text == "2" || strings.Contains(text, "harga") || strings.Contains(text, "paket") ||
-		strings.Contains(text, "biaya") || strings.Contains(text, "tarif") ||
-		strings.Contains(text, "langganan") || strings.Contains(text, "subscription") ||
-		strings.Contains(text, "price") || strings.Contains(text, "pricelist") ||
-		strings.Contains(text, "berapa") {
-		botReply = "OCTO-CRM menawarkan paket berlangganan fleksibel sesuai skala bisnis Anda:\n\n📦 *Paket Starter:* Solusi hemat UMKM (hingga 3 Agen CS, WhatsApp Multi-Account, Kanban Deals).\n🏢 *Paket Business:* Pilihan terpopuler (hingga 10 Agen CS, AI Copilot, Broadcast WhatsApp, Helpdesk SLA).\n🚀 *Paket Enterprise:* Solusi kustom korporat (Unlimited Agent, Dedicated Support, Integrasi API kustom).\n\nKetik *CS* untuk mendapatkan simulasi perhitungan biaya dan proposal penawaran resmi dari tim Sales kami!"
+	} else if text == "2" || (settings != nil && matchKeywords(settings.Menu2Keywords)) ||
+		strings.Contains(text, "harga") || strings.Contains(text, "paket") || strings.Contains(text, "biaya") || strings.Contains(text, "tarif") {
+		if settings != nil && settings.Menu2Response != "" {
+			botReply = interpolate(settings.Menu2Response)
+		} else {
+			botReply = "Kami menyediakan berbagai paket penawaran fleksibel yang dapat disesuaikan dengan kebutuhan Anda.\n\nKetik *CS* untuk mendapatkan simulasi perhitungan biaya dan proposal penawaran resmi dari tim Sales kami!"
+		}
 
-	} else if text == "3" || strings.Contains(text, "jam operasional") || strings.Contains(text, "jam kerja") ||
-		strings.Contains(text, "alamat") || strings.Contains(text, "kantor") ||
-		strings.Contains(text, "lokasi") || strings.Contains(text, "buka jam berapa") ||
-		strings.Contains(text, "jadwal") {
-		botReply = "⏰ *Jam Operasional Kantor:* \nSenin - Jumat: 08:00 - 18:00 WIB\nSabtu: 09:00 - 15:00 WIB\n(Layanan WhatsApp Bot & Monitoring Darurat tetap aktif 24/7)\n\n📍 *Kantor Pusat:* \nOCTO Technologies Indonesia, Jakarta Selatan, Indonesia.\n\nAda hal lain yang dapat kami bantu kak?"
+	} else if text == "3" || (settings != nil && matchKeywords(settings.Menu3Keywords)) ||
+		strings.Contains(text, "jam operasional") || strings.Contains(text, "jam kerja") || strings.Contains(text, "alamat") || strings.Contains(text, "kantor") {
+		if settings != nil && settings.Menu3Response != "" {
+			botReply = interpolate(settings.Menu3Response)
+		} else {
+			botReply = "⏰ *Jam Operasional Kantor:* \nSenin - Jumat: 08:00 - 18:00 WIB\nSabtu: 09:00 - 15:00 WIB\n(Layanan Chatbot & Monitoring Darurat aktif 24/7)\n\n📍 *Alamat Kantor:* \nSilakan hubungi tim kami untuk jadwal kunjungan atau panduan lokasi."
+		}
+
+	} else if text == "4" || (settings != nil && matchKeywords(settings.Menu4Keywords)) ||
+		text == "cs" || strings.Contains(text, "komplain") || strings.Contains(text, "keluhan") ||
+		strings.Contains(text, "bicara dengan orang") || strings.Contains(text, "manusia") {
+		// Explicit request to talk to human CS
+		isHandoff = true
+		handoffReason = content
+		if settings != nil && settings.HandoffMessage != "" {
+			botReply = interpolate(settings.HandoffMessage)
+		} else {
+			botReply = fmt.Sprintf("Baik %s, pertanyaan Anda memerlukan penanganan langsung dari tim Customer Service (CS) kami. 👨‍💼👩‍💼\n\nPesan Anda telah kami alihkan ke agen manusia kami dan tim kami sudah menerima notifikasi prioritas untuk segera membalas percakapan ini.\n\nMohon ditunggu sebentar ya kak, agen CS kami akan segera bergabung dalam obrolan ini! 🙏", displayName)
+		}
 
 	} else {
 		// Fallback / Complex Question / Out-of-Scope / Request Human CS / Komplain / Kendala
 		isHandoff = true
 		handoffReason = content
-		botReply = fmt.Sprintf("Baik %s, pertanyaan Anda memerlukan penanganan langsung dari tim Customer Service (CS) kami. 👨‍💼👩‍💼\n\nPesan Anda telah kami alihkan ke agen manusia kami dan tim kami sudah menerima notifikasi prioritas untuk segera membalas percakapan ini.\n\nMohon ditunggu sebentar ya kak, agen CS kami akan segera bergabung dalam obrolan ini! 🙏", displayName)
+		if settings != nil && settings.HandoffMessage != "" {
+			botReply = interpolate(settings.HandoffMessage)
+		} else {
+			botReply = fmt.Sprintf("Baik %s, pertanyaan Anda memerlukan penanganan langsung dari tim Customer Service (CS) kami. 👨‍💼👩‍💼\n\nPesan Anda telah kami alihkan ke agen manusia kami dan tim kami sudah menerima notifikasi prioritas untuk segera membalas percakapan ini.\n\nMohon ditunggu sebentar ya kak, agen CS kami akan segera bergabung dalam obrolan ini! 🙏", displayName)
+		}
 	}
 
 	// 1. Create Bot Message in DB
@@ -1072,7 +1171,7 @@ func (s *InboxService) ProcessBotReply(workspaceID string, conv *domain.Conversa
 		ID:             uuid.New().String(),
 		ConversationID: conv.ID,
 		SenderType:     "bot",
-		SenderName:     "OCTO Chatbot",
+		SenderName:     botSenderName,
 		Content:        botReply,
 		Channel:        conv.Channel,
 		Status:         "delivered",
