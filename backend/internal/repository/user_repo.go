@@ -501,3 +501,9 @@ func (r *UserRepository) UpdateWorkspaceMasterStatus(wsID string, req domain.Upd
 	_, err := r.db.Exec(query, req.Status, req.SubscriptionPlan, req.MaxUsers, req.MaxChannels, wsID)
 	return err
 }
+
+func (r *UserRepository) DeleteWorkspaceMaster(wsID string) error {
+	query := `DELETE FROM workspaces WHERE id = $1`
+	_, err := r.db.Exec(query, wsID)
+	return err
+}

@@ -66,3 +66,15 @@ func (h *MasterHandler) UpdateCompanyStatus(c *gin.Context) {
 
 	c.JSON(http.StatusOK, domain.SuccessResponse(nil, "Status perusahaan berhasil diperbarui."))
 }
+
+func (h *MasterHandler) DeleteCompany(c *gin.Context) {
+	currentUserID := c.GetString("userID")
+	workspaceID := c.Param("id")
+
+	if err := h.masterService.DeleteCompany(currentUserID, workspaceID); err != nil {
+		c.JSON(http.StatusBadRequest, domain.ErrorResponse(err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, domain.SuccessResponse(nil, "Perusahaan dan seluruh data terkait berhasil dihapus permanen."))
+}

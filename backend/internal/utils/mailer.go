@@ -1,29 +1,234 @@
 package utils
 
 import (
+	"bytes"
+	"crypto/tls"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"net"
+	"net/http"
 	"net/smtp"
 	"os"
+	"strings"
+	"time"
 )
 
-type EmailMessage struct {
-	To          string
-	Subject     string
-	HTMLBody    string
-	TextBody    string
-	WorkspaceName string
-	InviterName string
-	RoleTitle   string
-	InviteURL   string
+// GetFrontendURL returns the configured public web frontend URL.
+// Priority: FRONTEND_URL env > APP_URL env > NEXT_PUBLIC_APP_URL > default http://localhost:3000
+func GetFrontendURL() string {
+	url := os.Getenv("FRONTEND_URL")
+	if url == "" {
+		url = os.Getenv("APP_URL")
+	}
+	if url == "" {
+		url = os.Getenv("NEXT_PUBLIC_APP_URL")
+	}
+	if url == "" {
+		url = "http://localhost:3000"
+	}
+	return strings.TrimRight(url, "/")
 }
 
-// SendInvitationEmail sends an official HTML invitation email to the employee
-func SendInvitationEmail(msg EmailMessage) error {
+type EmailMessage struct {
+	To            string
+	Subject       string
+	HTMLBody      string
+	TextBody      string
+	WorkspaceName string
+	InviterName   string
+	RoleTitle     string
+	InviteURL     string
+}
+
+// sendViaBrevoAPI sends transactional emails directly via Brevo's official HTTPS REST API.
+// This operates on standard HTTPS (port 443) and is NEVER blocked by cloud platforms (Railway, Vercel, Render).
+func sendViaBrevoAPI(apiKey, fromEmail, fromName, toEmail, subject, htmlContent string) error {
+	type brevoContact struct {
+		Name  string `json:"name,omitempty"`
+		Email string `json:"email"`
+	}
+	type brevoPayload struct {
+		Sender      brevoContact   `json:"sender"`
+		To          []brevoContact `json:"to"`
+		Subject     string         `json:"subject"`
+		HTMLContent string         `json:"htmlContent"`
+	}
+
+	payload := brevoPayload{
+		Sender:      brevoContact{Name: fromName, Email: fromEmail},
+		To:          []brevoContact{{Email: toEmail}},
+		Subject:     subject,
+		HTMLContent: htmlContent,
+	}
+
+	bodyBytes, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("failed to encode Brevo payload: %w", err)
+	}
+
+	req, err := http.NewRequest("POST", "https://api.brevo.com/v3/smtp/email", bytes.NewBuffer(bodyBytes))
+	if err != nil {
+		return fmt.Errorf("failed to create Brevo request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("api-key", apiKey)
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("brevo HTTPS request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		return nil
+	}
+
+	respBody, _ := io.ReadAll(resp.Body)
+	return fmt.Errorf("brevo API error (HTTP %d): %s", resp.StatusCode, string(respBody))
+}
+
+// sendViaSMTP dispatches email via standard SMTP with a 10s dial timeout,
+// supporting both direct TLS (port 465) and STARTTLS (ports 587, 2525).
+func sendViaSMTP(host, port, user, pass, fromEmail, fromName, toEmail, subject, htmlContent string) error {
+	addr := net.JoinHostPort(host, port)
+	auth := smtp.PlainAuth("", user, pass, host)
+
+	headers := fmt.Sprintf("From: %s <%s>\r\n"+
+		"To: %s\r\n"+
+		"Subject: %s\r\n"+
+		"MIME-Version: 1.0\r\n"+
+		"Content-Type: text/html; charset=UTF-8\r\n"+
+		"\r\n", fromName, fromEmail, toEmail, subject)
+	msg := []byte(headers + htmlContent)
+
+	// Port 465: Direct SSL/TLS
+	if port == "465" {
+		dialer := &net.Dialer{Timeout: 10 * time.Second}
+		tlsConfig := &tls.Config{ServerName: host}
+		conn, err := tls.DialWithDialer(dialer, "tcp", addr, tlsConfig)
+		if err != nil {
+			return fmt.Errorf("tls dial failed (%s): %w", addr, err)
+		}
+		defer conn.Close()
+
+		client, err := smtp.NewClient(conn, host)
+		if err != nil {
+			return fmt.Errorf("smtp client failed: %w", err)
+		}
+		defer client.Quit()
+
+		if err := client.Auth(auth); err != nil {
+			return fmt.Errorf("smtp auth failed: %w", err)
+		}
+		if err := client.Mail(fromEmail); err != nil {
+			return fmt.Errorf("smtp mail from failed: %w", err)
+		}
+		if err := client.Rcpt(toEmail); err != nil {
+			return fmt.Errorf("smtp rcpt failed: %w", err)
+		}
+		w, err := client.Data()
+		if err != nil {
+			return fmt.Errorf("smtp data failed: %w", err)
+		}
+		if _, err := w.Write(msg); err != nil {
+			return fmt.Errorf("smtp write failed: %w", err)
+		}
+		return w.Close()
+	}
+
+	// Ports 587, 2525, etc: TCP Dial with Timeout + STARTTLS
+	dialer := &net.Dialer{Timeout: 10 * time.Second}
+	conn, err := dialer.Dial("tcp", addr)
+	if err != nil {
+		return fmt.Errorf("tcp connection timed out/failed (%s): %w", addr, err)
+	}
+	defer conn.Close()
+
+	client, err := smtp.NewClient(conn, host)
+	if err != nil {
+		return fmt.Errorf("smtp new client failed: %w", err)
+	}
+	defer client.Quit()
+
+	if ok, _ := client.Extension("STARTTLS"); ok {
+		tlsConfig := &tls.Config{ServerName: host}
+		if err := client.StartTLS(tlsConfig); err != nil {
+			return fmt.Errorf("starttls failed: %w", err)
+		}
+	}
+
+	if err := client.Auth(auth); err != nil {
+		return fmt.Errorf("smtp auth failed: %w", err)
+	}
+	if err := client.Mail(fromEmail); err != nil {
+		return fmt.Errorf("smtp mail from failed: %w", err)
+	}
+	if err := client.Rcpt(toEmail); err != nil {
+		return fmt.Errorf("smtp rcpt failed: %w", err)
+	}
+	w, err := client.Data()
+	if err != nil {
+		return fmt.Errorf("smtp data failed: %w", err)
+	}
+	if _, err := w.Write(msg); err != nil {
+		return fmt.Errorf("smtp write failed: %w", err)
+	}
+	return w.Close()
+}
+
+// sendEmail handles resilient dispatch:
+// 1. Tries Brevo REST API via HTTPS (Port 443) if BREVO_API_KEY is configured or key starts with xkeysib-.
+// 2. Tries standard SMTP if configured. If port 587 fails on Brevo, automatically tries port 2525 fallback.
+func sendEmail(fromEmail, fromName, toEmail, subject, htmlContent string) error {
 	smtpHost := os.Getenv("SMTP_HOST")
 	smtpPort := os.Getenv("SMTP_PORT")
 	smtpUser := os.Getenv("SMTP_USER")
 	smtpPass := os.Getenv("SMTP_PASS")
+
+	// 1. Brevo REST API via HTTPS (Port 443) - Recommended for Cloud/Railway
+	brevoKey := os.Getenv("BREVO_API_KEY")
+	if brevoKey == "" && strings.HasPrefix(smtpPass, "xkeysib-") {
+		brevoKey = smtpPass
+	}
+	if brevoKey != "" {
+		if err := sendViaBrevoAPI(brevoKey, fromEmail, fromName, toEmail, subject, htmlContent); err == nil {
+			log.Printf("[MAILER SUCCESS] Email dispatched to %s via Brevo HTTPS REST API (Port 443)", toEmail)
+			return nil
+		} else {
+			log.Printf("[MAILER WARNING] Brevo HTTPS REST API failed: %v. Trying SMTP fallback...", err)
+		}
+	}
+
+	// 2. SMTP Dispatch
+	if smtpHost != "" && smtpPort != "" {
+		if err := sendViaSMTP(smtpHost, smtpPort, smtpUser, smtpPass, fromEmail, fromName, toEmail, subject, htmlContent); err == nil {
+			log.Printf("[MAILER SUCCESS] Email dispatched to %s via SMTP (%s:%s)", toEmail, smtpHost, smtpPort)
+			return nil
+		} else {
+			log.Printf("[MAILER WARNING] Failed to send email via SMTP (%s:%s): %v", smtpHost, smtpPort, err)
+
+			// Automatic fallback: If port 587 timed out on Brevo, attempt port 2525 (unblocked on Railway)
+			if (smtpPort == "587" || smtpPort == "") && strings.Contains(smtpHost, "brevo.com") {
+				log.Printf("[MAILER INFO] Outbound port 587 is often blocked by Railway/Cloud firewalls. Retrying via Brevo port 2525...")
+				if fallbackErr := sendViaSMTP(smtpHost, "2525", smtpUser, smtpPass, fromEmail, fromName, toEmail, subject, htmlContent); fallbackErr == nil {
+					log.Printf("[MAILER SUCCESS] Email dispatched to %s via Brevo port 2525 fallback!", toEmail)
+					return nil
+				} else {
+					log.Printf("[MAILER WARNING] Brevo port 2525 fallback also failed: %v", fallbackErr)
+				}
+			}
+		}
+	}
+
+	return fmt.Errorf("email delivery failed via all configured channels")
+}
+
+// SendInvitationEmail sends an official HTML invitation email to the employee
+func SendInvitationEmail(msg EmailMessage) error {
 	fromEmail := os.Getenv("SMTP_FROM")
 	if fromEmail == "" {
 		fromEmail = "no-reply@octocrm.id"
@@ -43,7 +248,7 @@ func SendInvitationEmail(msg EmailMessage) error {
     .badge { display: inline-block; background-color: #eff6ff; color: #1d4ed8; font-weight: bold; font-size: 13px; padding: 6px 14px; border-radius: 20px; margin-bottom: 18px; border: 1px solid #bfdbfe; }
     .title { font-size: 20px; font-weight: 800; color: #0f172a; margin-top: 0; margin-bottom: 14px; }
     .btn-container { text-align: center; margin: 32px 0; }
-    .btn { display: inline-block; background-color: #00AFC4; color: #ffffff !important; font-weight: 800; font-size: 15px; text-decoration: none; padding: 14px 34px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 175, 196, 0.35); transition: background-color 0.2s; }
+    .btn { display: inline-block; background-color: #00AFC4; color: #ffffff !important; font-weight: 800; font-size: 15px; text-decoration: none; padding: 14px 34px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 175, 196, 0.35); }
     .notice { background: #f1f5f9; padding: 14px 18px; border-radius: 10px; font-size: 12px; color: #64748b; margin-top: 24px; border-left: 4px solid #00AFC4; }
     .footer { background: #f8fafc; padding: 20px 30px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #f1f5f9; }
   </style>
@@ -87,46 +292,26 @@ func SendInvitationEmail(msg EmailMessage) error {
 		msg.InviteURL,
 	)
 
-	// If SMTP is configured, attempt sending via real SMTP
-	if smtpHost != "" && smtpPort != "" {
-		auth := smtp.PlainAuth("", smtpUser, smtpPass, smtpHost)
-		headers := fmt.Sprintf("From: OCTO CRM <%s>\r\n"+
-			"To: %s\r\n"+
-			"Subject: Undangan Bergabung ke %s - OCTO CRM\r\n"+
-			"MIME-Version: 1.0\r\n"+
-			"Content-Type: text/html; charset=UTF-8\r\n"+
-			"\r\n", fromEmail, msg.To, msg.WorkspaceName)
-		body := []byte(headers + htmlContent)
-
-		addr := fmt.Sprintf("%s:%s", smtpHost, smtpPort)
-		if err := smtp.SendMail(addr, auth, fromEmail, []string{msg.To}, body); err != nil {
-			log.Printf("[MAILER WARNING] Failed to send email via SMTP (%s): %v. Fallback to direct link.", addr, err)
-		} else {
-			log.Printf("[MAILER SUCCESS] Invitation email dispatched successfully to %s via %s", msg.To, addr)
-			return nil
-		}
+	subject := fmt.Sprintf("Undangan Bergabung ke %s - OCTO CRM", msg.WorkspaceName)
+	err := sendEmail(fromEmail, "OCTO CRM", msg.To, subject, htmlContent)
+	if err != nil {
+		// Local development / zero-setup fallback: Log invitation link clearly
+		log.Printf("\n=======================================================\n"+
+			"📧 [OCTO CRM INVITATION EMAIL DISPATCHED (FALLBACK)]\n"+
+			"To: %s\n"+
+			"Workspace: %s\n"+
+			"Role: %s\n"+
+			"Active Token URL (Expires in 7 days):\n"+
+			"👉 %s\n"+
+			"=======================================================\n",
+			msg.To, msg.WorkspaceName, msg.RoleTitle, msg.InviteURL)
 	}
-
-	// Local development / zero-setup fallback: Log invitation link clearly
-	log.Printf("\n=======================================================\n"+
-		"📧 [OCTO CRM INVITATION EMAIL DISPATCHED]\n"+
-		"To: %s\n"+
-		"Workspace: %s\n"+
-		"Role: %s\n"+
-		"Active Token URL (Expires in 7 days):\n"+
-		"👉 %s\n"+
-		"=======================================================\n",
-		msg.To, msg.WorkspaceName, msg.RoleTitle, msg.InviteURL)
 
 	return nil
 }
 
 // SendEscalationEmail sends an urgent notification email to Supervisor or Owner when a chat is escalated
 func SendEscalationEmail(toEmail, recipientName, escalatedByName, contactName, channelIdentifier, reason, priority, chatURL, workspaceName string) error {
-	smtpHost := os.Getenv("SMTP_HOST")
-	smtpPort := os.Getenv("SMTP_PORT")
-	smtpUser := os.Getenv("SMTP_USER")
-	smtpPass := os.Getenv("SMTP_PASS")
 	fromEmail := os.Getenv("SMTP_FROM")
 	if fromEmail == "" {
 		fromEmail = "no-reply@octocrm.id"
@@ -152,7 +337,6 @@ func SendEscalationEmail(toEmail, recipientName, escalatedByName, contactName, c
     .priority-badge { display: inline-block; background-color: %s; color: #ffffff; font-weight: 800; font-size: 11px; padding: 3px 10px; border-radius: 6px; text-transform: uppercase; }
     .title { font-size: 18px; font-weight: 800; color: #0f172a; margin-top: 0; margin-bottom: 12px; }
     .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; margin: 20px 0; font-size: 13px; }
-    .card-row { display: flex; justify-content: space-between; margin-bottom: 8px; }
     .card-label { color: #64748b; font-weight: 600; }
     .card-val { color: #0f172a; font-weight: 700; text-align: right; }
     .reason-box { background: #fff1f2; border-left: 4px solid #e11d48; padding: 12px 16px; border-radius: 8px; margin-top: 14px; font-size: 13px; color: #9f1239; font-weight: 600; }
@@ -207,46 +391,25 @@ func SendEscalationEmail(toEmail, recipientName, escalatedByName, contactName, c
 	)
 
 	subject := fmt.Sprintf("⚡ [ESKALASI] Kasus dari %s (%s) Membutuhkan Tindakan Anda - OCTO CRM", contactName, priority)
-
-	if smtpHost != "" && smtpPort != "" {
-		auth := smtp.PlainAuth("", smtpUser, smtpPass, smtpHost)
-		headers := fmt.Sprintf("From: OCTO CRM Alerts <%s>\r\n"+
-			"To: %s\r\n"+
-			"Subject: %s\r\n"+
-			"MIME-Version: 1.0\r\n"+
-			"Content-Type: text/html; charset=UTF-8\r\n"+
-			"\r\n", fromEmail, toEmail, subject)
-		body := []byte(headers + htmlContent)
-
-		addr := fmt.Sprintf("%s:%s", smtpHost, smtpPort)
-		if err := smtp.SendMail(addr, auth, fromEmail, []string{toEmail}, body); err != nil {
-			log.Printf("[MAILER WARNING] Failed to send escalation email via SMTP (%s): %v", addr, err)
-		} else {
-			log.Printf("[MAILER SUCCESS] Escalation email dispatched to %s for conversation with %s", toEmail, contactName)
-			return nil
-		}
+	err := sendEmail(fromEmail, "OCTO CRM Alerts", toEmail, subject, htmlContent)
+	if err != nil {
+		log.Printf("\n=======================================================\n"+
+			"⚡ [OCTO CRM ESCALATION EMAIL DISPATCHED (FALLBACK)]\n"+
+			"To: %s (%s)\n"+
+			"Escalated By: %s\n"+
+			"Customer: %s (%s)\n"+
+			"Priority: %s\n"+
+			"Reason: %s\n"+
+			"Direct Action URL: %s\n"+
+			"=======================================================\n",
+			recipientName, toEmail, escalatedByName, contactName, channelIdentifier, priority, reason, chatURL)
 	}
-
-	log.Printf("\n=======================================================\n"+
-		"⚡ [OCTO CRM ESCALATION EMAIL DISPATCHED]\n"+
-		"To: %s (%s)\n"+
-		"Escalated By: %s\n"+
-		"Customer: %s (%s)\n"+
-		"Priority: %s\n"+
-		"Reason: %s\n"+
-		"Direct Action URL: %s\n"+
-		"=======================================================\n",
-		recipientName, toEmail, escalatedByName, contactName, channelIdentifier, priority, reason, chatURL)
 
 	return nil
 }
 
 // SendAssignmentEmail sends a notification email to an agent when a chat is assigned or re-assigned to them
 func SendAssignmentEmail(toEmail, recipientName, assignedByName, contactName, channelIdentifier, priority, chatURL, workspaceName string) error {
-	smtpHost := os.Getenv("SMTP_HOST")
-	smtpPort := os.Getenv("SMTP_PORT")
-	smtpUser := os.Getenv("SMTP_USER")
-	smtpPass := os.Getenv("SMTP_PASS")
 	fromEmail := os.Getenv("SMTP_FROM")
 	if fromEmail == "" {
 		fromEmail = "no-reply@octocrm.id"
@@ -311,35 +474,18 @@ func SendAssignmentEmail(toEmail, recipientName, assignedByName, contactName, ch
 	)
 
 	subject := fmt.Sprintf("👤 [PENUGASAN CHAT] Anda Ditugaskan Menangani %s - OCTO CRM", contactName)
-
-	if smtpHost != "" && smtpPort != "" {
-		auth := smtp.PlainAuth("", smtpUser, smtpPass, smtpHost)
-		headers := fmt.Sprintf("From: OCTO CRM Alerts <%s>\r\n"+
-			"To: %s\r\n"+
-			"Subject: %s\r\n"+
-			"MIME-Version: 1.0\r\n"+
-			"Content-Type: text/html; charset=UTF-8\r\n"+
-			"\r\n", fromEmail, toEmail, subject)
-		body := []byte(headers + htmlContent)
-
-		addr := fmt.Sprintf("%s:%s", smtpHost, smtpPort)
-		if err := smtp.SendMail(addr, auth, fromEmail, []string{toEmail}, body); err != nil {
-			log.Printf("[MAILER WARNING] Failed to send assignment email via SMTP (%s): %v", addr, err)
-		} else {
-			log.Printf("[MAILER SUCCESS] Assignment email dispatched to %s for conversation with %s", toEmail, contactName)
-			return nil
-		}
+	err := sendEmail(fromEmail, "OCTO CRM Alerts", toEmail, subject, htmlContent)
+	if err != nil {
+		log.Printf("\n=======================================================\n"+
+			"👤 [OCTO CRM ASSIGNMENT EMAIL DISPATCHED (FALLBACK)]\n"+
+			"To: %s (%s)\n"+
+			"Assigned By: %s\n"+
+			"Customer: %s (%s)\n"+
+			"Priority: %s\n"+
+			"Direct Action URL: %s\n"+
+			"=======================================================\n",
+			recipientName, toEmail, assignedByName, contactName, channelIdentifier, priority, chatURL)
 	}
-
-	log.Printf("\n=======================================================\n"+
-		"👤 [OCTO CRM ASSIGNMENT EMAIL DISPATCHED]\n"+
-		"To: %s (%s)\n"+
-		"Assigned By: %s\n"+
-		"Customer: %s (%s)\n"+
-		"Priority: %s\n"+
-		"Direct Action URL: %s\n"+
-		"=======================================================\n",
-		recipientName, toEmail, assignedByName, contactName, channelIdentifier, priority, chatURL)
 
 	return nil
 }

@@ -113,7 +113,7 @@ func (s *MasterService) ProvisionCompany(currentUserID string, req domain.Provis
 		return nil, "", fmt.Errorf("gagal mendaftarkan perusahaan: %w", err)
 	}
 
-	inviteURL := fmt.Sprintf("http://localhost:3000/invite?token=%s", token)
+	inviteURL := fmt.Sprintf("%s/invite?token=%s", utils.GetFrontendURL(), token)
 
 	// Dispatch Onboarding Activation Email via Brevo SMTP
 	go func() {
@@ -171,6 +171,33 @@ func (s *MasterService) UpdateCompanyStatus(currentUserID, workspaceID string, r
 		EntityType:  "workspace",
 		EntityID:    workspaceID,
 		Description: fmt.Sprintf("Status perusahaan %s diubah menjadi '%s' (plan: %s)", workspaceID, req.Status, req.SubscriptionPlan),
+	})
+
+	return nil
+}
+
+func (s *MasterService) DeleteCompany(currentUserID, workspaceID string) error {
+	ws, err := s.userRepo.GetWorkspaceByID(workspaceID)
+	if err != nil {
+		return fmt.Errorf("perusahaan tidak ditemukan: %w", err)
+	}
+
+	if ws.Slug == "octo-technologies" || ws.ID == "0c700000-0000-0000-0000-000000000000" {
+		return errors.New("perusahaan utama platform (PT OCTO Technologies Indonesia) tidak dapat dihapus")
+	}
+
+	companyName := ws.Name
+	if err := s.userRepo.DeleteWorkspaceMaster(workspaceID); err != nil {
+		return fmt.Errorf("gagal menghapus perusahaan: %w", err)
+	}
+
+	_ = s.auditRepo.LogEvent(&domain.AuditEvent{
+		WorkspaceID: workspaceID,
+		UserID:      &currentUserID,
+		Action:      "master_company_deleted",
+		EntityType:  "workspace",
+		EntityID:    workspaceID,
+		Description: fmt.Sprintf("Perusahaan '%s' (ID: %s) telah dihapus permanen oleh Platform Superadmin", companyName, workspaceID),
 	})
 
 	return nil
