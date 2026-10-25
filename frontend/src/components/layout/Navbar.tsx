@@ -37,10 +37,16 @@ export default function Navbar({
               <span>👑</span>
               <span>Owner / Admin</span>
             </span>
-          ) : activeRole === 'supervisor' ? (
+          ) : activeRole === 'admin' || activeRole === 'supervisor' || currentWorkspace?.role === 'admin' || currentWorkspace?.role === 'supervisor' ? (
             <span className="text-amber-700 flex items-center gap-1.5 font-bold">
               <span>🎖️</span>
-              <span>Supervisor Tim</span>
+              <span>
+                {currentWorkspace?.department === 'support'
+                  ? 'Admin / Lead CS (After-Sales)'
+                  : currentWorkspace?.department === 'sales'
+                  ? 'Admin / Lead Sales (Pre-Sales)'
+                  : 'Admin (Lead / Supervisor)'}
+              </span>
             </span>
           ) : activeRole === 'support' ? (
             <span className="text-purple-600 flex items-center gap-1.5 font-bold">

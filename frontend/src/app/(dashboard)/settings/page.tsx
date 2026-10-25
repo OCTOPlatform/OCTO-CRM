@@ -37,11 +37,14 @@ import {
 } from 'lucide-react';
 
 export default function SettingsPage() {
-  const { currentWorkspace, user } = useAuth();
+  const { currentWorkspace, user, activeRole } = useAuth();
   const isOwnerOrAdmin =
     currentWorkspace?.role === 'owner' ||
     currentWorkspace?.role === 'admin' ||
     currentWorkspace?.role === 'supervisor' ||
+    activeRole === 'owner' ||
+    activeRole === 'admin' ||
+    activeRole === 'supervisor' ||
     Boolean(user?.is_superadmin);
   const [activeTab, setActiveTab] = useState<'workspace' | 'chatbot' | 'automations'>('workspace');
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
@@ -406,7 +409,7 @@ export default function SettingsPage() {
               <div className="font-bold">Akses Terbatas: Hanya Pemilik (Owner) & Admin yang dapat mengelola pengaturan & template</div>
               <p>
                 Akun Anda saat ini login dengan hak akses operasional (role: <strong className="uppercase">{currentWorkspace?.role || 'member'}</strong>). 
-                Pengaturan hak akses, undangan tim, dan pengubahan template chatbot WhatsApp hanya dapat dilakukan oleh Admin (Supervisor) atau Super Admin / Owner.
+                Pengaturan hak akses, undangan tim, dan pengubahan template chatbot WhatsApp hanya dapat dilakukan oleh Admin (Lead / Supervisor CS & Sales) atau Super Admin / Owner.
               </p>
             </div>
           </div>
@@ -767,7 +770,7 @@ export default function SettingsPage() {
               <div>
                 <h3 className="font-bold text-sm text-[#142740]">Template & Konfigurasi Chatbot WhatsApp ({wsName})</h3>
                 <p className="text-xs text-[#586779]">
-                  Sesuaikan template pesan sapaan, menu produk, penawaran harga, dan alur eskalasi khusus perusahaan Anda.
+                  Sesuaikan template pesan sapaan, menu produk, penawaran harga, dan alur eskalasi khusus perusahaan Anda (Dapat dikelola oleh Owner & Admin / Lead CS).
                 </p>
               </div>
             </div>
