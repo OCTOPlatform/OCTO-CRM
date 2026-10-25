@@ -315,7 +315,7 @@ export default function MonitoringDashboardView({
                       <ArrowRight className="w-3 h-3" />
                     </button>
 
-                    {(activeRole === 'owner' || activeRole === 'supervisor' || !conv.assigned_to_id) && (
+                    {(activeRole === 'owner' || activeRole === 'supervisor' || activeRole === 'admin' || !conv.assigned_to_id) && (
                       <button
                         type="button"
                         onClick={() => onTakeover(conv)}

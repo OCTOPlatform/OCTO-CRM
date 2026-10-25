@@ -21,6 +21,7 @@ import {
   MessageSquare,
   LifeBuoy,
   ShieldCheck,
+  Bot,
 } from 'lucide-react';
 
 interface NavItem {
@@ -95,11 +96,23 @@ export default function Sidebar() {
       { group: 'Operations', items: opItems },
     ];
 
-    // 6. Administration (Owner only)
-    if (activeRole === 'owner') {
+    // 6. Administration (Owner & Admin / Supervisor / Lead)
+    const canAccessSettings =
+      activeRole === 'owner' ||
+      activeRole === 'admin' ||
+      activeRole === 'supervisor' ||
+      currentWorkspace?.role === 'owner' ||
+      currentWorkspace?.role === 'admin' ||
+      currentWorkspace?.role === 'supervisor' ||
+      Boolean(user?.is_superadmin);
+
+    if (canAccessSettings) {
       groups.push({
         group: 'Administration',
-        items: [{ label: 'Settings & Team', href: '/settings', icon: Settings }],
+        items: [
+          { label: 'Settings & Team', href: '/settings', icon: Settings },
+          { label: 'Template Chatbot WA', href: '/settings?tab=chatbot', icon: Bot, badge: 'WhatsApp' },
+        ],
       });
     }
 
@@ -242,7 +255,17 @@ export default function Sidebar() {
           <div className="overflow-hidden">
             <div className="text-xs font-semibold text-white truncate">{user?.full_name || 'User'}</div>
             <div className="text-[10px] text-[#00AFC4] font-bold truncate">
-              {activeRole === 'owner' ? '👑 Owner' : activeRole === 'sales' ? '💼 Tim Sales' : '🎧 Tim CS'}
+              {(activeRole === 'admin' || activeRole === 'supervisor' || currentWorkspace?.role === 'admin' || currentWorkspace?.role === 'supervisor')
+                ? currentWorkspace?.department === 'support'
+                  ? '🎖️ Lead CS'
+                  : currentWorkspace?.department === 'sales'
+                  ? '🎖️ Lead Sales'
+                  : '🎖️ Admin Lead'
+                : activeRole === 'owner'
+                ? '👑 Owner'
+                : activeRole === 'sales'
+                ? '💼 Tim Sales'
+                : '🎧 Tim CS'}
             </div>
           </div>
         </div>
