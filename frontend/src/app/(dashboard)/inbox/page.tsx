@@ -1822,31 +1822,37 @@ export default function InboxPage() {
                     <span className="hidden sm:inline">{summarizing ? 'Meringkas...' : 'Ringkas AI'}</span>
                   </button>
 
-                  <button
-                    onClick={() => {
-                      setDealTitle(`Kesepakatan - ${activeConv.contact_name || activeConv.channel_identifier}`);
-                      setShowConvertModal(true);
-                    }}
-                    className="px-2.5 py-1 rounded-lg bg-[#00AFC4] hover:bg-[#0096a8] text-white text-xs font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer"
-                    title="Jadikan prospek ini sebagai peluang baru di Pipeline (Pre-Sales)"
-                  >
-                    <TrendingUp className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Peluang</span>
-                  </button>
+                  {/* Tombol Buat Peluang Pipeline (Khusus Pre-Sales & Owner/Admin) */}
+                  {activeRole !== 'support' && currentWorkspace?.department !== 'support' && (
+                    <button
+                      onClick={() => {
+                        setDealTitle(`Kesepakatan - ${activeConv.contact_name || activeConv.channel_identifier}`);
+                        setShowConvertModal(true);
+                      }}
+                      className="px-2.5 py-1 rounded-lg bg-[#00AFC4] hover:bg-[#0096a8] text-white text-xs font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer"
+                      title="Jadikan prospek ini sebagai peluang baru di Pipeline (Pre-Sales)"
+                    >
+                      <TrendingUp className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Peluang</span>
+                    </button>
+                  )}
 
-                  <button
-                    onClick={() => {
-                      setTicketSubject(`Keluhan/Kendala - ${activeConv.contact_name || activeConv.channel_identifier}`);
-                      const lastMsg = messages.length > 0 ? messages[messages.length - 1].content : '';
-                      setTicketDesc(lastMsg);
-                      setShowTicketModal(true);
-                    }}
-                    className="px-2.5 py-1 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer"
-                    title="Jadikan obrolan ini sebagai Tiket Bantuan CS (After-Sales Helpdesk)"
-                  >
-                    <LifeBuoy className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Tiket CS</span>
-                  </button>
+                  {/* Tombol Buat Tiket Bantuan CS (Khusus After-Sales CS & Owner/Admin) */}
+                  {activeRole !== 'sales' && currentWorkspace?.department !== 'sales' && (
+                    <button
+                      onClick={() => {
+                        setTicketSubject(`Keluhan/Kendala - ${activeConv.contact_name || activeConv.channel_identifier}`);
+                        const lastMsg = messages.length > 0 ? messages[messages.length - 1].content : '';
+                        setTicketDesc(lastMsg);
+                        setShowTicketModal(true);
+                      }}
+                      className="px-2.5 py-1 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer"
+                      title="Jadikan obrolan ini sebagai Tiket Bantuan CS (After-Sales Helpdesk)"
+                    >
+                      <LifeBuoy className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Tiket CS</span>
+                    </button>
+                  )}
 
                   <button
                     onClick={handleToggleStatus}

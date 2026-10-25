@@ -63,28 +63,17 @@ func (h *IntegrationHandler) IngestLead(c *gin.Context) {
 			c.JSON(http.StatusForbidden, domain.ErrorResponse("Workspace perusahaan sedang ditangguhkan"))
 			return
 		}
-
-		// If no user context (public webhook submission from OCTO-WEB), auto-assign to workspace owner
-		if userID == "" {
-			members, err := h.userRepo.GetWorkspaceMembers(workspaceID)
-			if err == nil && len(members) > 0 {
-				for _, m := range members {
-					if m.Role == "owner" || m.Role == "admin" {
-						userID = m.UserID
-						break
-					}
-				}
-				if userID == "" {
-					userID = members[0].UserID
-				}
-			}
-		}
 	}
 
 	var req domain.LeadIntakeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, domain.ErrorResponse("INVALID_REQUEST_BODY: "+err.Error()))
 		return
+	}
+
+	// If explicit assignee provided in payload and no authenticated user session
+	if userID == "" && req.AssigneeID != nil && strings.TrimSpace(*req.AssigneeID) != "" {
+		userID = strings.TrimSpace(*req.AssigneeID)
 	}
 
 	result, err := h.integrationService.IngestLead(workspaceID, userID, req)

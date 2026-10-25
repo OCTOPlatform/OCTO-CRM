@@ -405,3 +405,19 @@ func (r *TicketRepository) GetSupportStats(workspaceID string) (*domain.SupportR
 
 	return stats, nil
 }
+
+// IsAfterSalesMember checks if a user belongs to the After-Sales (CS / support) department or is workspace owner/admin
+func (r *TicketRepository) IsAfterSalesMember(workspaceID, userID string) (bool, error) {
+	var count int
+	query := `
+		SELECT COUNT(*) 
+		FROM workspace_members 
+		WHERE workspace_id = $1 AND user_id = $2
+		AND (department = 'support' OR department = 'cs' OR role IN ('owner', 'admin'))
+	`
+	err := r.db.Get(&count, query, workspaceID, userID)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}

@@ -39,11 +39,22 @@ func (s *TaskService) CreateTask(workspaceID, currentUserID string, req domain.C
 	}
 
 	if task.AssignedToID == nil || *task.AssignedToID == "" {
-		task.AssignedToID = &currentUserID
+		if strings.TrimSpace(currentUserID) != "" {
+			cleanUser := strings.TrimSpace(currentUserID)
+			task.AssignedToID = &cleanUser
+		} else {
+			task.AssignedToID = nil
+		}
 	}
 
 	if err := s.taskRepo.CreateTask(&task); err != nil {
 		return nil, err
+	}
+
+	var userPtr *string
+	if strings.TrimSpace(currentUserID) != "" {
+		cleanUser := strings.TrimSpace(currentUserID)
+		userPtr = &cleanUser
 	}
 
 	// Record activity if linked to contact
@@ -52,7 +63,7 @@ func (s *TaskService) CreateTask(workspaceID, currentUserID string, req domain.C
 			WorkspaceID: workspaceID,
 			ContactID:   *task.ContactID,
 			DealID:      task.DealID,
-			UserID:      &currentUserID,
+			UserID:      userPtr,
 			Type:        domain.ActivityNote,
 			Subject:     fmt.Sprintf("Tugas dibuat: %s", task.Title),
 			Description: task.Description,
@@ -61,7 +72,7 @@ func (s *TaskService) CreateTask(workspaceID, currentUserID string, req domain.C
 
 	_ = s.auditRepo.LogEvent(&domain.AuditEvent{
 		WorkspaceID: workspaceID,
-		UserID:      &currentUserID,
+		UserID:      userPtr,
 		Action:      "task_created",
 		EntityType:  "task",
 		EntityID:    task.ID,

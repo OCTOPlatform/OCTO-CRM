@@ -32,6 +32,9 @@ import {
 
 export default function PipelinePage() {
   const { currentWorkspace, user, activeRole } = useAuth();
+  const isOwner = currentWorkspace?.role === 'owner' || activeRole === 'owner';
+  const isAfterSales =
+    (activeRole === 'support' || currentWorkspace?.department === 'support') && !isOwner;
   const [pipeline, setPipeline] = useState<Pipeline | null>(null);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -132,7 +135,7 @@ export default function PipelinePage() {
   const filteredDeals = useMemo(() => {
     return deals.filter((deal) => {
       // For CS After-Sales role: strictly only WON deals!
-      if (activeRole === 'support') {
+      if (isAfterSales) {
         const isWon =
           deal.status === 'won' ||
           (pipeline?.stages &&
@@ -179,14 +182,14 @@ export default function PipelinePage() {
 
   const allStages = pipeline?.stages || [];
   const stages = useMemo(() => {
-    if (activeRole === 'support') {
+    if (isAfterSales) {
       const wonStages = allStages.filter(
         (s) => s.is_won || s.name.toLowerCase().includes('won') || s.name.toLowerCase().includes('closing')
       );
       return wonStages.length > 0 ? wonStages : allStages.slice(-1);
     }
     return allStages;
-  }, [allStages, activeRole]);
+  }, [allStages, isAfterSales]);
 
   // Stage Move handler
   const handleMoveStage = async (dealId: string, newStageId: string) => {
@@ -483,7 +486,7 @@ export default function PipelinePage() {
             </button>
           </div>
 
-          {activeRole !== 'support' && (
+          {!isAfterSales && (
             <button
               onClick={() => setShowAddDealModal(true)}
               className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#00AFC4] hover:bg-[#0096a8] text-white text-xs font-bold shadow-xs transition cursor-pointer"
@@ -496,7 +499,7 @@ export default function PipelinePage() {
       </div>
 
       {/* CS Contextual Banner for Won Deals Analysis */}
-      {activeRole === 'support' && (
+      {isAfterSales && (
         <div className="mx-6 mt-4 p-4 rounded-2xl bg-purple-50 border border-purple-200/80 shadow-2xs flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center shrink-0">
@@ -556,7 +559,7 @@ export default function PipelinePage() {
                         {stage.probability}%
                       </span>
                       {/* Odoo Quick Add (+) Button in Stage Column */}
-                      {activeRole !== 'support' && (
+                      {!isAfterSales && (
                         <button
                           onClick={() => setQuickAddStageId(isQuickAddOpen ? null : stage.id)}
                           className={`p-1 rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-200 transition cursor-pointer ${

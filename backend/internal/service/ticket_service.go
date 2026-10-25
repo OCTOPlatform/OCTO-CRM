@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -65,6 +66,10 @@ func (s *TicketService) CreateTicket(workspaceID, currentUserID string, req doma
 	var assignedToID *string
 	if req.AssignedToID != nil && strings.TrimSpace(*req.AssignedToID) != "" {
 		trimmed := strings.TrimSpace(*req.AssignedToID)
+		isAfterSales, err := s.ticketRepo.IsAfterSalesMember(workspaceID, trimmed)
+		if err == nil && !isAfterSales {
+			return nil, errors.New("penanggung jawab tiket bantuan CS harus dari departemen After-Sales (CS)")
+		}
 		assignedToID = &trimmed
 	}
 
@@ -121,6 +126,14 @@ func (s *TicketService) UpdateTicket(workspaceID, currentUserID, ticketID string
 	existing, err := s.ticketRepo.GetTicketByID(workspaceID, ticketID)
 	if err != nil {
 		return nil, err
+	}
+
+	if req.AssignedToID != nil && strings.TrimSpace(*req.AssignedToID) != "" {
+		trimmed := strings.TrimSpace(*req.AssignedToID)
+		isAfterSales, err := s.ticketRepo.IsAfterSalesMember(workspaceID, trimmed)
+		if err == nil && !isAfterSales {
+			return nil, errors.New("penanggung jawab tiket bantuan CS harus dari departemen After-Sales (CS)")
+		}
 	}
 
 	updated, err := s.ticketRepo.UpdateTicket(workspaceID, ticketID, req)

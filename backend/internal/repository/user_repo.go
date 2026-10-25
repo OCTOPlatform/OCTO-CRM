@@ -187,7 +187,7 @@ func (r *UserRepository) UpdateWorkspace(ws *domain.Workspace) error {
 func (r *UserRepository) GetUserWorkspaceMembership(workspaceID, userID string) (*domain.WorkspaceMember, error) {
 	var member domain.WorkspaceMember
 	query := `
-		SELECT wm.id, wm.workspace_id, wm.user_id, u.email, u.full_name, u.avatar_url, wm.role, wm.joined_at
+		SELECT wm.id, wm.workspace_id, wm.user_id, u.email, u.full_name, u.avatar_url, wm.role, COALESCE(wm.department, 'sales') AS department, wm.joined_at
 		FROM workspace_members wm
 		JOIN users u ON wm.user_id = u.id
 		WHERE wm.workspace_id = $1 AND wm.user_id = $2
