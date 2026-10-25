@@ -129,3 +129,18 @@ type MarkDealWonLostRequest struct {
 	Status     DealStatus `json:"status" binding:"required"` // "won" or "lost"
 	LostReason string     `json:"lost_reason"`
 }
+
+type DealOutreachRequest struct {
+	TaskID  *string `json:"task_id"`
+	Message string  `json:"message" binding:"required"`
+	Action  string  `json:"action"` // "send_and_complete" or "prepare_conversation"
+}
+
+type DealOutreachResponse struct {
+	ConversationID string `json:"conversation_id"`
+	MessageSent    bool   `json:"message_sent"`
+	TaskCompleted  bool   `json:"task_completed"`
+	ClientPhone    string `json:"client_phone"`
+	ClientName     string `json:"client_name"`
+	TextSent       string `json:"text_sent"`
+}

@@ -498,9 +498,13 @@ export default function InboxPage() {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const convParam = params.get('conversation_id');
+      const draftParam = params.get('draft');
       if (convParam) {
         setSelectedConvId(convParam);
         setViewMode('inbox');
+      }
+      if (draftParam) {
+        setReplyText(draftParam);
       }
     }
 
