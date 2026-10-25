@@ -109,6 +109,11 @@ func (s *IntegrationService) IngestLead(workspaceID, currentUserID string, req d
 	}
 
 	// 4. Create Contact
+	var ownerID *string
+	if strings.TrimSpace(currentUserID) != "" {
+		ownerID = &currentUserID
+	}
+
 	contact, err := s.contactService.CreateContact(workspaceID, currentUserID, domain.CreateContactRequest{
 		CompanyID:     companyID,
 		FirstName:     firstName,
@@ -121,7 +126,7 @@ func (s *IntegrationService) IngestLead(workspaceID, currentUserID string, req d
 		Notes:         notes,
 		ConsentStatus: consentStatus,
 		CustomFields:  customBytes,
-		OwnerID:       &currentUserID,
+		OwnerID:       ownerID,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create contact: %w", err)
@@ -171,7 +176,7 @@ func (s *IntegrationService) IngestLead(workspaceID, currentUserID string, req d
 				StageID:    firstStage.ID,
 				ContactID:  &contact.ID,
 				CompanyID:  companyID,
-				OwnerID:    &currentUserID,
+				OwnerID:    ownerID,
 				Title:      dealTitle,
 				Value:      dealVal,
 				Currency:   "IDR",
@@ -192,7 +197,7 @@ func (s *IntegrationService) IngestLead(workspaceID, currentUserID string, req d
 	task, err := s.taskService.CreateTask(workspaceID, currentUserID, domain.CreateTaskRequest{
 		ContactID:    &contact.ID,
 		DealID:       resp.DealID,
-		AssignedToID: &currentUserID,
+		AssignedToID: ownerID,
 		Title:        taskTitle,
 		Description:  taskDesc,
 		DueDate:      &todayDue,
@@ -205,7 +210,7 @@ func (s *IntegrationService) IngestLead(workspaceID, currentUserID string, req d
 
 	_ = s.auditRepo.LogEvent(&domain.AuditEvent{
 		WorkspaceID: workspaceID,
-		UserID:      &currentUserID,
+		UserID:      ownerID,
 		Action:      "lead_intake_processed",
 		EntityType:  "integration",
 		EntityID:    contact.ID,

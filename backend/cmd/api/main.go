@@ -81,7 +81,7 @@ func main() {
 	taskHandler := handler.NewTaskHandler(taskService)
 	activityHandler := handler.NewActivityHandler(activityService)
 	reportHandler := handler.NewReportHandler(reportService)
-	integrationHandler := handler.NewIntegrationHandler(integrationService)
+	integrationHandler := handler.NewIntegrationHandler(integrationService, userRepo, cfg.JWTSecret)
 	inboxHandler := handler.NewInboxHandler(inboxService, cfg)
 	ticketHandler := handler.NewTicketHandler(ticketService)
 	pillarHandler := handler.NewPillarHandler(pillarService)
@@ -130,6 +130,9 @@ func main() {
 		// Public Member Onboarding via Magic Token (Model 2)
 		api.GET("/invitations/:token", workspaceHandler.GetInvitation)
 		api.POST("/invitations/:token/accept", workspaceHandler.AcceptInvitation)
+
+		// Public Inbound Lead Intake Webhook (Ecosystem from OCTO-WEB / OCTO-TAP / Third-Party Forms)
+		api.POST("/workspaces/:workspace_id/integrations/lead-intake", integrationHandler.IngestLead)
 
 		// 2. Authenticated user routes
 		userAuth := api.Group("")
@@ -207,9 +210,6 @@ func main() {
 			wsRoutes.GET("/reports/lead-sources", reportHandler.GetLeadSources)
 			wsRoutes.GET("/reports/activities", reportHandler.GetActivitySummary)
 			wsRoutes.GET("/reports/audit-logs", middleware.RequireRole(domain.RoleOwner, domain.RoleAdmin), reportHandler.ListAuditLogs)
-
-			// Ecosystem Integrations (Inbound Lead Intake from OCTO-WEB / OCTO-TAP)
-			wsRoutes.POST("/integrations/lead-intake", integrationHandler.IngestLead)
 
 			// Omnichannel Live Chat & Inbox (WhatsApp + Email)
 			wsRoutes.GET("/conversations", inboxHandler.ListConversations)

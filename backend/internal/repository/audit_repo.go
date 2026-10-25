@@ -28,6 +28,9 @@ func (r *AuditRepository) LogEvent(event *domain.AuditEvent) error {
 	if len(event.Metadata) == 0 {
 		event.Metadata = json.RawMessage("{}")
 	}
+	if event.UserID != nil && *event.UserID == "" {
+		event.UserID = nil
+	}
 
 	query := `
 		INSERT INTO audit_events (id, workspace_id, user_id, action, entity_type, entity_id, description, metadata, ip_address, created_at)
