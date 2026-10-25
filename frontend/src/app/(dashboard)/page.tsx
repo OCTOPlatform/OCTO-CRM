@@ -34,6 +34,9 @@ import {
 
 export default function DashboardPage() {
   const { currentWorkspace, activeRole } = useAuth();
+  const isOwner = currentWorkspace?.role === 'owner' || activeRole === 'owner';
+  const isSalesDept = (activeRole === 'sales' || currentWorkspace?.department === 'sales') && !isOwner;
+  const isSupportDept = (activeRole === 'support' || currentWorkspace?.department === 'support') && !isOwner;
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [funnel, setFunnel] = useState<StageFunnelItem[]>([]);
   const [leadSources, setLeadSources] = useState<LeadSourceItem[]>([]);
@@ -97,16 +100,16 @@ export default function DashboardPage() {
     <div className="flex-1 flex flex-col">
       <Navbar
         title={
-          activeRole === 'sales'
+          isSalesDept
             ? 'Dashboard Penjualan (Pre-Sales)'
-            : activeRole === 'support'
+            : isSupportDept
             ? 'Dashboard Layanan & Helpdesk (After-Sales)'
             : 'Dashboard Eksekutif Perusahaan'
         }
         subtitle={
-          activeRole === 'sales'
+          isSalesDept
             ? 'Monitoring target penjualan, prospek baru, dan deal closing'
-            : activeRole === 'support'
+            : isSupportDept
             ? 'Monitoring tiket masuk, kepatuhan SLA, dan kepuasan pelanggan'
             : `Workspace: ${currentWorkspace?.name} • Akses Penuh Super Admin`
         }
@@ -139,7 +142,7 @@ export default function DashboardPage() {
         )}
 
         {/* 1. Stat Metric Cards */}
-        {activeRole === 'support' ? (
+        {isSupportDept ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
               <div className="flex items-center justify-between text-slate-500 mb-2">
@@ -274,7 +277,7 @@ export default function DashboardPage() {
         )}
 
         {/* 2. Middle Section (Role-based) */}
-        {activeRole === 'support' ? (
+        {isSupportDept ? (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
               <div className="flex items-center justify-between">

@@ -57,9 +57,14 @@ export default function Sidebar() {
 
     // 3. Omnichannel & Chat / Support
     const chatItems: NavItem[] = [];
-    if (activeRole === 'sales') {
+    const isOwner = currentWorkspace?.role === 'owner' || activeRole === 'owner';
+    const isSalesDept = (activeRole === 'sales' || currentWorkspace?.department === 'sales') && !isOwner;
+    const isSupportDept = (activeRole === 'support' || currentWorkspace?.department === 'support') && !isOwner;
+
+    if (isSalesDept) {
       chatItems.push({ label: 'Live Chat (Pre-Sales)', href: '/inbox', icon: MessageSquare, badge: 'Sales WA' });
-    } else if (activeRole === 'support') {
+      // Pre-Sales berfokus pada pipeline prospek & penjualan, tiket bantuan CS dihilangkan
+    } else if (isSupportDept) {
       chatItems.push({ label: 'Live Chat (After-Sales)', href: '/inbox', icon: MessageSquare, badge: 'CS Hotline' });
       chatItems.push({ label: 'Tiket Bantuan (CS)', href: '/tickets', icon: LifeBuoy, badge: 'Helpdesk' });
     } else {
@@ -69,7 +74,7 @@ export default function Sidebar() {
 
     // 4. Sales & Pipeline
     const pipelineItems: NavItem[] = [];
-    if (activeRole === 'support') {
+    if (isSupportDept) {
       pipelineItems.push({ label: 'Deals Pipeline', href: '/pipeline', icon: Kanban, badge: 'Won Only' });
     } else {
       pipelineItems.push({ label: 'Deals Pipeline', href: '/pipeline', icon: Kanban });
@@ -79,7 +84,7 @@ export default function Sidebar() {
     const opItems: NavItem[] = [
       { label: 'All Tasks', href: '/tasks', icon: ListTodo },
       {
-        label: activeRole === 'sales' ? 'Laporan Penjualan' : activeRole === 'support' ? 'Laporan Tiket & SLA' : 'Reports & Funnel',
+        label: isSalesDept ? 'Laporan Penjualan' : isSupportDept ? 'Laporan Tiket & SLA' : 'Reports & Funnel',
         href: '/reports',
         icon: BarChart3,
       },

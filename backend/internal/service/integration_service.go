@@ -108,7 +108,21 @@ func (s *IntegrationService) IngestLead(workspaceID, currentUserID string, req d
 		notes = fmt.Sprintf("Preferensi Jadwal: %s. %s", req.PreferredDate, notes)
 	}
 
-	// 4. Create Contact
+	// 4. Create Contact & Sales Assignee (Pre-Sales department only)
+	var ownerID *string
+	if strings.TrimSpace(currentUserID) != "" {
+		clean := strings.TrimSpace(currentUserID)
+		if isPresales, err := s.dealRepo.IsPresalesMember(workspaceID, clean); err == nil && isPresales {
+			ownerID = &clean
+		}
+	} else if req.AssigneeID != nil && strings.TrimSpace(*req.AssigneeID) != "" {
+		clean := strings.TrimSpace(*req.AssigneeID)
+		if isPresales, err := s.dealRepo.IsPresalesMember(workspaceID, clean); err == nil && isPresales {
+			ownerID = &clean
+			currentUserID = clean
+		}
+	}
+
 	contact, err := s.contactService.CreateContact(workspaceID, currentUserID, domain.CreateContactRequest{
 		CompanyID:     companyID,
 		FirstName:     firstName,
@@ -121,7 +135,7 @@ func (s *IntegrationService) IngestLead(workspaceID, currentUserID string, req d
 		Notes:         notes,
 		ConsentStatus: consentStatus,
 		CustomFields:  customBytes,
-		OwnerID:       &currentUserID,
+		OwnerID:       ownerID,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create contact: %w", err)
@@ -151,11 +165,10 @@ func (s *IntegrationService) IngestLead(workspaceID, currentUserID string, req d
 		if len(defaultPipeline.Stages) > 0 {
 			firstStage := defaultPipeline.Stages[0]
 
-			dealVal := 5000000.0
-			if strings.Contains(req.CompanySize, "51-200") {
-				dealVal = 25000000.0
-			} else if strings.Contains(req.CompanySize, "11-50") {
-				dealVal = 12000000.0
+			// Nilai kesepakatan default 0 (dapat di-update setelah follow-up/menghubungi calon klien)
+			dealVal := 0.0
+			if req.EstimatedValue != nil && *req.EstimatedValue > 0 {
+				dealVal = *req.EstimatedValue
 			}
 
 			dealTitle := fmt.Sprintf("Peluang %s", req.FullName)
@@ -171,7 +184,7 @@ func (s *IntegrationService) IngestLead(workspaceID, currentUserID string, req d
 				StageID:    firstStage.ID,
 				ContactID:  &contact.ID,
 				CompanyID:  companyID,
-				OwnerID:    &currentUserID,
+				OwnerID:    ownerID,
 				Title:      dealTitle,
 				Value:      dealVal,
 				Currency:   "IDR",
@@ -192,7 +205,7 @@ func (s *IntegrationService) IngestLead(workspaceID, currentUserID string, req d
 	task, err := s.taskService.CreateTask(workspaceID, currentUserID, domain.CreateTaskRequest{
 		ContactID:    &contact.ID,
 		DealID:       resp.DealID,
-		AssignedToID: &currentUserID,
+		AssignedToID: ownerID,
 		Title:        taskTitle,
 		Description:  taskDesc,
 		DueDate:      &todayDue,
@@ -205,7 +218,7 @@ func (s *IntegrationService) IngestLead(workspaceID, currentUserID string, req d
 
 	_ = s.auditRepo.LogEvent(&domain.AuditEvent{
 		WorkspaceID: workspaceID,
-		UserID:      &currentUserID,
+		UserID:      ownerID,
 		Action:      "lead_intake_processed",
 		EntityType:  "integration",
 		EntityID:    contact.ID,

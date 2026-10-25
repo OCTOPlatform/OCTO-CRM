@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Deal, PipelineStage, Contact, Company, Activity, Task, User, Quotation } from '@/types';
+import { Deal, PipelineStage, Contact, Company, Activity, Task, User, Quotation, WorkspaceMember } from '@/types';
 import { api } from '@/lib/api';
 import { formatCurrencyIDR, formatDateIndo } from '@/lib/auth-context';
 import {
@@ -87,6 +87,8 @@ export default function DealDetailModal({
   const [valueInput, setValueInput] = useState<number>(0);
   const [editingProbability, setEditingProbability] = useState(false);
   const [probabilityInput, setProbabilityInput] = useState<number>(0);
+  const [members, setMembers] = useState<WorkspaceMember[]>([]);
+  const [updatingOwner, setUpdatingOwner] = useState(false);
 
   // CPQ Quotations (Pilar 3)
   const [quotations, setQuotations] = useState<Quotation[]>([]);
@@ -104,11 +106,12 @@ export default function DealDetailModal({
   const loadDealDetail = async () => {
     try {
       setLoading(true);
-      const [dealData, actList, taskList, quoteList] = await Promise.all([
+      const [dealData, actList, taskList, quoteList, memberList] = await Promise.all([
         api.getDeal(workspaceId, dealId),
         api.listDealActivities(workspaceId, dealId),
         api.listTasks(workspaceId, { deal_id: dealId }),
         api.listQuotations(workspaceId, dealId).catch(() => []),
+        api.listMembers(workspaceId).catch(() => []),
       ]);
       setDeal(dealData);
       setTitleInput(dealData.title);
@@ -117,6 +120,7 @@ export default function DealDetailModal({
       setActivities(actList);
       setDealTasks(taskList);
       setQuotations(quoteList || []);
+      setMembers(memberList || []);
       setQuoteTitle(`Penawaran Resmi: ${dealData.title}`);
     } catch (err) {
       console.error('Failed to load deal detail:', err);
@@ -280,6 +284,28 @@ export default function DealDetailModal({
       onDealUpdated();
     } catch (err: any) {
       alert(err.message || 'Gagal memperbarui nilai');
+    }
+  };
+
+  // Reassign Sales Representative (PIC)
+  const handleAssignOwner = async (newOwnerId: string) => {
+    if (!deal) return;
+    try {
+      setUpdatingOwner(true);
+      await api.updateDeal(workspaceId, deal.id, {
+        owner_id: newOwnerId === '' ? '' : newOwnerId,
+      });
+      const selectedMember = members.find((m) => m.user_id === newOwnerId);
+      setDeal({
+        ...deal,
+        owner_id: newOwnerId === '' ? undefined : newOwnerId,
+        owner_name: selectedMember ? selectedMember.full_name : undefined,
+      });
+      onDealUpdated();
+    } catch (e: any) {
+      alert(e.message || 'Gagal memperbarui sales penanggung jawab');
+    } finally {
+      setUpdatingOwner(false);
     }
   };
 
@@ -662,11 +688,33 @@ export default function DealDetailModal({
                 <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600">
                   <UserIcon className="w-4 h-4" />
                 </div>
-                <div>
-                  <span className="text-xs font-medium text-slate-400 block">Sales Penanggung Jawab</span>
-                  <span className="text-sm font-semibold text-slate-800">
-                    {deal.owner_name || 'Belum ditugaskan'}
-                  </span>
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs font-medium text-slate-400 block mb-1">Sales Penanggung Jawab (Pre-Sales)</span>
+                  <select
+                    value={deal.owner_id || ''}
+                    disabled={updatingOwner}
+                    onChange={(e) => handleAssignOwner(e.target.value)}
+                    className="text-xs font-semibold text-slate-800 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 focus:ring-1 focus:ring-[#00AFC4] focus:border-[#00AFC4] outline-hidden cursor-pointer w-full max-w-[240px]"
+                    title="Tugaskan atau ubah penanggung jawab kesepakatan ini (Hanya staf Pre-Sales)"
+                  >
+                    <option value="">Belum Ditugaskan (Unassigned)</option>
+                    {members
+                      .filter((m) => {
+                        // Keep currently assigned owner visible in case already assigned
+                        if (deal.owner_id === m.user_id) return true;
+                        // Exclude After-Sales (CS / support) members
+                        if (m.department === 'support' && m.role !== 'owner' && m.role !== 'admin') {
+                          return false;
+                        }
+                        return true;
+                      })
+                      .map((m) => (
+                        <option key={m.user_id} value={m.user_id}>
+                          {m.full_name || m.email} (Pre-Sales • {m.role})
+                        </option>
+                      ))}
+                  </select>
+                  <span className="text-[10px] text-slate-400 block mt-1">Khusus staf departemen Pre-Sales / Sales</span>
                 </div>
               </div>
 

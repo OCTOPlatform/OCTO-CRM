@@ -81,7 +81,7 @@ func main() {
 	taskHandler := handler.NewTaskHandler(taskService)
 	activityHandler := handler.NewActivityHandler(activityService)
 	reportHandler := handler.NewReportHandler(reportService)
-	integrationHandler := handler.NewIntegrationHandler(integrationService)
+	integrationHandler := handler.NewIntegrationHandler(integrationService, userRepo, cfg.JWTSecret)
 	inboxHandler := handler.NewInboxHandler(inboxService, cfg)
 	ticketHandler := handler.NewTicketHandler(ticketService)
 	pillarHandler := handler.NewPillarHandler(pillarService)
@@ -130,6 +130,9 @@ func main() {
 		// Public Member Onboarding via Magic Token (Model 2)
 		api.GET("/invitations/:token", workspaceHandler.GetInvitation)
 		api.POST("/invitations/:token/accept", workspaceHandler.AcceptInvitation)
+
+		// Public Inbound Lead Intake Webhook (Ecosystem from OCTO-WEB / OCTO-TAP / Third-Party Forms)
+		api.POST("/workspaces/:workspace_id/integrations/lead-intake", integrationHandler.IngestLead)
 
 		// 2. Authenticated user routes
 		userAuth := api.Group("")
@@ -208,9 +211,6 @@ func main() {
 			wsRoutes.GET("/reports/activities", reportHandler.GetActivitySummary)
 			wsRoutes.GET("/reports/audit-logs", middleware.RequireRole(domain.RoleOwner, domain.RoleAdmin), reportHandler.ListAuditLogs)
 
-			// Ecosystem Integrations (Inbound Lead Intake from OCTO-WEB / OCTO-TAP)
-			wsRoutes.POST("/integrations/lead-intake", integrationHandler.IngestLead)
-
 			// Omnichannel Live Chat & Inbox (WhatsApp + Email)
 			wsRoutes.GET("/conversations", inboxHandler.ListConversations)
 			wsRoutes.GET("/conversations/:conversation_id", inboxHandler.GetConversation)
@@ -245,13 +245,17 @@ func main() {
 			wsRoutes.POST("/inbox/whatsapp-sync-history", inboxHandler.SyncWhatsAppHistory)
 			wsRoutes.POST("/inbox/upload", inboxHandler.UploadAttachment)
 
-			// Tickets (Support & After-Sales Helpdesk)
-			wsRoutes.GET("/tickets", ticketHandler.ListTickets)
-			wsRoutes.POST("/tickets", ticketHandler.CreateTicket)
-			wsRoutes.GET("/tickets/:ticket_id", ticketHandler.GetTicket)
-			wsRoutes.PATCH("/tickets/:ticket_id", ticketHandler.UpdateTicket)
-			wsRoutes.POST("/tickets/:ticket_id/notes", ticketHandler.AddTicketNote)
-			wsRoutes.GET("/reports/support", ticketHandler.GetSupportStats)
+			// Tickets (Support & After-Sales Helpdesk - Exclusively for After-Sales CS & Owner/Admin)
+			ticketRoutes := wsRoutes.Group("/tickets", middleware.RequireAfterSalesDepartment())
+			{
+				ticketRoutes.GET("", ticketHandler.ListTickets)
+				ticketRoutes.POST("", ticketHandler.CreateTicket)
+				ticketRoutes.GET("/:ticket_id", ticketHandler.GetTicket)
+				ticketRoutes.PATCH("/:ticket_id", ticketHandler.UpdateTicket)
+				ticketRoutes.POST("/:ticket_id/notes", ticketHandler.AddTicketNote)
+				ticketRoutes.POST("/check-sla", pillarHandler.CheckSLAEscalation)
+			}
+			wsRoutes.GET("/reports/support", middleware.RequireAfterSalesDepartment(), ticketHandler.GetSupportStats)
 
 			// Workspace Channels (Multi-Account / Multi-Session)
 			wsRoutes.GET("/channels", inboxHandler.ListChannels)
@@ -274,9 +278,6 @@ func main() {
 			// Pilar 1: Workflow Automation & Triggers
 			wsRoutes.GET("/automations", pillarHandler.ListAutomations)
 			wsRoutes.PUT("/automations", pillarHandler.UpdateAutomation)
-
-			// Pilar 4: Helpdesk SLA Escalation Check
-			wsRoutes.POST("/tickets/check-sla", pillarHandler.CheckSLAEscalation)
 
 			// Pilar 5: AI Sales & CS Copilot (Summarize & Smart Replies)
 			wsRoutes.POST("/ai/summarize-chat", pillarHandler.SummarizeChat)

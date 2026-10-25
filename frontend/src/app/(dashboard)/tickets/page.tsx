@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import Navbar from '@/components/layout/Navbar';
 import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
@@ -47,7 +48,7 @@ const PRIORITY_CONFIG: Record<TicketPriority, { label: string; badge: string }> 
 };
 
 export default function TicketsPage() {
-  const { currentWorkspace, user } = useAuth();
+  const { currentWorkspace, user, activeRole } = useAuth();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -248,6 +249,40 @@ export default function TicketsPage() {
   const escalatedCount = tickets.filter((t) => t.status === 'escalated' || t.priority === 'urgent').length;
   const resolvedCount = tickets.filter((t) => t.status === 'resolved' || t.status === 'closed').length;
   const resolutionRate = totalCount > 0 ? Math.round((resolvedCount / totalCount) * 100) : 0;
+
+  const isOwner = currentWorkspace?.role === 'owner' || activeRole === 'owner';
+  const isPreSales =
+    (activeRole === 'sales' || currentWorkspace?.department === 'sales') && !isOwner;
+
+  if (isPreSales) {
+    return (
+      <div className="flex-1 flex flex-col bg-slate-50 min-h-screen">
+        <Navbar
+          title="Tiket Bantuan (CS)"
+          subtitle="Alur penanganan kendala dan komplain pelanggan"
+        />
+        <div className="flex-1 flex items-center justify-center p-6">
+          <div className="max-w-md w-full bg-white p-8 rounded-2xl border border-slate-200 shadow-xs text-center space-y-4">
+            <div className="w-14 h-14 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center mx-auto">
+              <ShieldAlert className="w-7 h-7" />
+            </div>
+            <h2 className="text-lg font-bold text-slate-800">Tiket Bantuan Khusus After-Sales (CS)</h2>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Departemen Pre-Sales berfokus pada prospek dan peluang penjualan di Sales Pipeline. Pengelolaan tiket bantuan dan helpdesk keluhan pelanggan dikelola secara eksklusif oleh tim Customer Service (After-Sales).
+            </p>
+            <div className="pt-2 flex justify-center gap-3">
+              <Link
+                href="/pipeline"
+                className="px-4 py-2 rounded-xl bg-[#00AFC4] text-white text-xs font-bold hover:bg-[#0096a8] transition shadow-xs"
+              >
+                Buka Sales Pipeline
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 flex flex-col bg-slate-50 min-h-screen">
@@ -665,11 +700,16 @@ export default function TicketsPage() {
                     className="w-full text-xs font-medium bg-white border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#00AFC4]"
                   >
                     <option value="">-- Belum Di-assign --</option>
-                    {members.map((m) => (
-                      <option key={m.user_id} value={m.user_id}>
-                        {m.full_name} ({m.department || m.role})
-                      </option>
-                    ))}
+                    {members
+                      .filter((m) => {
+                        if (selectedTicket.assigned_to_id === m.user_id) return true;
+                        return m.department === 'support' || m.department === 'cs' || m.role === 'owner' || m.role === 'admin';
+                      })
+                      .map((m) => (
+                        <option key={m.user_id} value={m.user_id}>
+                          {m.full_name} (After-Sales • {m.role})
+                        </option>
+                      ))}
                   </select>
                 </div>
 
@@ -839,12 +879,14 @@ export default function TicketsPage() {
                     onChange={(e) => setFormAssigneeId(e.target.value)}
                     className="w-full text-xs px-3 py-2 rounded-xl border border-slate-200 bg-white"
                   >
-                    <option value="">-- Pilih Anggota --</option>
-                    {members.map((m) => (
-                      <option key={m.user_id} value={m.user_id}>
-                        {m.full_name}
-                      </option>
-                    ))}
+                    <option value="">-- Pilih Anggota After-Sales --</option>
+                    {members
+                      .filter((m) => m.department === 'support' || m.department === 'cs' || m.role === 'owner' || m.role === 'admin')
+                      .map((m) => (
+                        <option key={m.user_id} value={m.user_id}>
+                          {m.full_name} (After-Sales • {m.role})
+                        </option>
+                      ))}
                   </select>
                 </div>
               </div>

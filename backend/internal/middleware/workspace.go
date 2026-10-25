@@ -65,9 +65,46 @@ func WorkspaceMiddleware(userRepo *repository.UserRepository) gin.HandlerFunc {
 
 		c.Set("workspaceID", workspaceID)
 		c.Set("userRole", membership.Role)
+		c.Set("userDepartment", membership.Department)
 		c.Set("isSuperAdmin", isSuperAdmin)
 
 		c.Next()
+	}
+}
+
+// RequireAfterSalesDepartment ensures only After-Sales (CS / support) department and executive workspace owner can access
+func RequireAfterSalesDepartment() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if isSuper, exists := c.Get("isSuperAdmin"); exists && isSuper.(bool) {
+			c.Next()
+			return
+		}
+
+		roleVal, _ := c.Get("userRole")
+		userRole, _ := roleVal.(domain.Role)
+
+		// Workspace Owner always has top-level access across all departments
+		if userRole == domain.RoleOwner {
+			c.Next()
+			return
+		}
+
+		deptVal, _ := c.Get("userDepartment")
+		userDept, _ := deptVal.(string)
+
+		// Pre-Sales department (including admin/lead/supervisor) is strictly forbidden from CS tickets
+		if userDept == "sales" {
+			c.AbortWithStatusJSON(http.StatusForbidden, domain.ErrorResponse("Akses ditolak: Tiket bantuan CS hanya untuk departemen After-Sales (CS)"))
+			return
+		}
+
+		// Allow After-Sales department or general management without departmental boundary
+		if userDept == "support" || userDept == "cs" || userDept == "all" || userDept == "" {
+			c.Next()
+			return
+		}
+
+		c.AbortWithStatusJSON(http.StatusForbidden, domain.ErrorResponse("Akses ditolak: Tiket bantuan CS hanya untuk departemen After-Sales (CS)"))
 	}
 }
 

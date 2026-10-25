@@ -2,6 +2,7 @@ package service
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -75,11 +76,32 @@ func (s *DealService) CreateDeal(workspaceID, currentUserID string, req domain.C
 		deal.Status = domain.DealStatusOpen
 	}
 	if deal.OwnerID == nil || *deal.OwnerID == "" {
-		deal.OwnerID = &currentUserID
+		if strings.TrimSpace(currentUserID) != "" {
+			cleanUser := strings.TrimSpace(currentUserID)
+			// Only auto-assign if current user is Pre-Sales (or owner/admin)
+			if isPresales, err := s.dealRepo.IsPresalesMember(workspaceID, cleanUser); err == nil && isPresales {
+				deal.OwnerID = &cleanUser
+			} else {
+				deal.OwnerID = nil
+			}
+		} else {
+			deal.OwnerID = nil
+		}
+	} else if deal.OwnerID != nil && *deal.OwnerID != "" {
+		cleanOwner := strings.TrimSpace(*deal.OwnerID)
+		if isPresales, err := s.dealRepo.IsPresalesMember(workspaceID, cleanOwner); err == nil && !isPresales {
+			return nil, errors.New("penanggung jawab deal di sales pipeline harus dari departemen Pre-Sales")
+		}
 	}
 
 	if err := s.dealRepo.CreateDeal(&deal); err != nil {
 		return nil, err
+	}
+
+	var userPtr *string
+	if strings.TrimSpace(currentUserID) != "" {
+		cleanUser := strings.TrimSpace(currentUserID)
+		userPtr = &cleanUser
 	}
 
 	// Create activity
@@ -91,7 +113,7 @@ func (s *DealService) CreateDeal(workspaceID, currentUserID string, req domain.C
 		WorkspaceID: workspaceID,
 		ContactID:   contactID,
 		DealID:      &deal.ID,
-		UserID:      &currentUserID,
+		UserID:      userPtr,
 		Type:        domain.ActivityStatusChange,
 		Subject:     fmt.Sprintf("Peluang penjualan baru dibuat: %s", deal.Title),
 		Description: fmt.Sprintf("Nilai peluang: Rp %.0f", deal.Value),
@@ -99,7 +121,7 @@ func (s *DealService) CreateDeal(workspaceID, currentUserID string, req domain.C
 
 	_ = s.auditRepo.LogEvent(&domain.AuditEvent{
 		WorkspaceID: workspaceID,
-		UserID:      &currentUserID,
+		UserID:      userPtr,
 		Action:      "deal_created",
 		EntityType:  "deal",
 		EntityID:    deal.ID,
@@ -142,13 +164,31 @@ func (s *DealService) UpdateDeal(workspaceID, currentUserID, id string, req doma
 		deal.StageID = *req.StageID
 	}
 	if req.ContactID != nil {
-		deal.ContactID = req.ContactID
+		if strings.TrimSpace(*req.ContactID) == "" {
+			deal.ContactID = nil
+		} else {
+			clean := strings.TrimSpace(*req.ContactID)
+			deal.ContactID = &clean
+		}
 	}
 	if req.CompanyID != nil {
-		deal.CompanyID = req.CompanyID
+		if strings.TrimSpace(*req.CompanyID) == "" {
+			deal.CompanyID = nil
+		} else {
+			clean := strings.TrimSpace(*req.CompanyID)
+			deal.CompanyID = &clean
+		}
 	}
 	if req.OwnerID != nil {
-		deal.OwnerID = req.OwnerID
+		if strings.TrimSpace(*req.OwnerID) == "" {
+			deal.OwnerID = nil
+		} else {
+			cleanOwner := strings.TrimSpace(*req.OwnerID)
+			if isPresales, err := s.dealRepo.IsPresalesMember(workspaceID, cleanOwner); err == nil && !isPresales {
+				return nil, errors.New("penanggung jawab deal di sales pipeline harus dari departemen Pre-Sales")
+			}
+			deal.OwnerID = &cleanOwner
+		}
 	}
 	if req.Status != nil {
 		deal.Status = *req.Status

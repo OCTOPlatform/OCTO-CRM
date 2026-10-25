@@ -299,3 +299,19 @@ func (r *DealRepository) DeleteDeal(workspaceID, id string) error {
 	_, err := r.db.Exec(query, workspaceID, id)
 	return err
 }
+
+// IsPresalesMember checks if a user belongs to the Pre-Sales department (or is owner/admin)
+func (r *DealRepository) IsPresalesMember(workspaceID, userID string) (bool, error) {
+	var count int
+	query := `
+		SELECT COUNT(*) 
+		FROM workspace_members 
+		WHERE workspace_id = $1 AND user_id = $2
+		AND (COALESCE(department, 'sales') != 'support' OR role IN ('owner', 'admin'))
+	`
+	err := r.db.Get(&count, query, workspaceID, userID)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
