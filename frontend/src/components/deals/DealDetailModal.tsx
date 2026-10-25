@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Deal, PipelineStage, Contact, Company, Activity, Task, User, Quotation, WorkspaceMember } from '@/types';
 import { api } from '@/lib/api';
 import { formatCurrencyIDR, formatDateIndo } from '@/lib/auth-context';
@@ -54,10 +55,17 @@ export default function DealDetailModal({
   onClose,
   onDealUpdated,
 }: DealDetailModalProps) {
+  const router = useRouter();
   const [deal, setDeal] = useState<Deal | null>(null);
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [dealTasks, setDealTasks] = useState<Task[]>([]);
+  
+  // Pre-Sales WhatsApp Outreach (Hibrida)
+  const [showOutreachModal, setShowOutreachModal] = useState(false);
+  const [selectedTaskForOutreach, setSelectedTaskForOutreach] = useState<Task | null>(null);
+  const [outreachMessage, setOutreachMessage] = useState('');
+  const [sendingOutreach, setSendingOutreach] = useState(false);
   
   // Chatter active tab: 'note' | 'activity'
   const [chatterTab, setChatterTab] = useState<'note' | 'activity'>('note');
@@ -388,6 +396,67 @@ export default function DealDetailModal({
     }
   };
 
+  // Pre-Sales Hybrid WhatsApp Outreach
+  const generateOutreachGreeting = (task?: Task | null) => {
+    const clientName = deal?.contact_name || 'Bapak/Ibu';
+    const salesName = currentUser?.full_name || deal?.owner_name || 'Tim Pre-Sales';
+    const dealTopic = deal?.title || 'kebutuhan bisnis Anda';
+
+    return `Halo Kak ${clientName}, salam kenal!
+
+Terima kasih telah menghubungi kami terkait ${dealTopic}.
+
+Perkenalkan saya ${salesName}, konsultan representatif Anda. Apakah saat ini waktu yang nyaman untuk kita berdiskusi santai mengenai kebutuhan Anda?
+
+Jika ada pertanyaan spesifik yang ingin dibahas terlebih dahulu, silakan kabari saya ya. Terima kasih! 🙏`;
+  };
+
+  const handleOpenOutreachModal = (task?: Task) => {
+    setSelectedTaskForOutreach(task || null);
+    setOutreachMessage(generateOutreachGreeting(task));
+    setShowOutreachModal(true);
+  };
+
+  const handleSendAndCompleteOutreach = async () => {
+    if (!deal) return;
+    try {
+      setSendingOutreach(true);
+      await api.sendDealOutreachWhatsApp(workspaceId, deal.id, {
+        task_id: selectedTaskForOutreach?.id,
+        message: outreachMessage,
+        action: 'send_and_complete',
+      });
+      setShowOutreachModal(false);
+      setSelectedTaskForOutreach(null);
+      await loadDealDetail();
+      onDealUpdated();
+      alert('Pesan sapaan WhatsApp berhasil dikirim dan aktivitas tindak lanjut telah diselesaikan!');
+    } catch (err: any) {
+      alert(err.message || 'Gagal mengirim pesan WhatsApp');
+    } finally {
+      setSendingOutreach(false);
+    }
+  };
+
+  const handleOpenInLiveChat = async () => {
+    if (!deal) return;
+    try {
+      setSendingOutreach(true);
+      const res = await api.sendDealOutreachWhatsApp(workspaceId, deal.id, {
+        task_id: selectedTaskForOutreach?.id,
+        message: outreachMessage,
+        action: 'prepare_conversation',
+      });
+      setShowOutreachModal(false);
+      onClose();
+      router.push(`/inbox?conversation_id=${res.conversation_id}&draft=${encodeURIComponent(outreachMessage)}`);
+    } catch (err: any) {
+      alert(err.message || 'Gagal membuka Live Chat');
+    } finally {
+      setSendingOutreach(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-y-auto">
       <div className="bg-white rounded-2xl w-full max-w-6xl shadow-2xl flex flex-col max-h-[92vh] border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
@@ -667,7 +736,18 @@ export default function DealDetailModal({
                     <span className="text-xs text-slate-500 block">{deal.contact_email}</span>
                   )}
                   {deal.contact_phone && (
-                    <span className="text-xs text-slate-500 block">{deal.contact_phone}</span>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-xs text-slate-500">{deal.contact_phone}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenOutreachModal()}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 text-[11px] font-semibold transition cursor-pointer"
+                        title="Kirim sapaan WhatsApp atau buka di Live Chat"
+                      >
+                        <MessageSquare className="w-3 h-3 text-emerald-600" />
+                        Sapa WA
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -888,14 +968,27 @@ export default function DealDetailModal({
                             {task.due_date ? formatDateIndo(task.due_date) : 'Hari ini'}
                           </p>
                         </div>
-                        <button
-                          onClick={() => handleToggleTask(task.id)}
-                          className="px-2 py-1 rounded bg-emerald-50 text-emerald-700 border border-emerald-300 hover:bg-emerald-100 text-[11px] font-semibold transition flex items-center gap-1 whitespace-nowrap"
-                          title="Tandai Selesai"
-                        >
-                          <Check className="w-3 h-3" />
-                          Selesai
-                        </button>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {deal.contact_phone && (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenOutreachModal(task)}
+                              className="px-2 py-1 rounded bg-emerald-600 text-white hover:bg-emerald-700 text-[11px] font-semibold transition flex items-center gap-1 whitespace-nowrap shadow-xs cursor-pointer"
+                              title="Hubungi calon klien via WhatsApp"
+                            >
+                              <MessageSquare className="w-3 h-3" />
+                              Hubungi WA
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleToggleTask(task.id)}
+                            className="px-2 py-1 rounded bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200 text-[11px] font-semibold transition flex items-center gap-1 whitespace-nowrap cursor-pointer"
+                            title="Tandai Selesai"
+                          >
+                            <Check className="w-3 h-3" />
+                            Selesai
+                          </button>
+                        </div>
                       </div>
                     ))}
                 </div>
@@ -1268,6 +1361,127 @@ export default function DealDetailModal({
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* MODAL: HYBRID WHATSAPP OUTREACH PRE-SALES */}
+      {showOutreachModal && deal && (
+        <div className="fixed inset-0 z-60 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl w-full max-w-xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="px-5 py-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                  <MessageSquare className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Hubungi Calon Klien via WhatsApp</h3>
+                  <p className="text-xs text-slate-500">Departemen Pre-Sales &bull; {deal.contact_name || 'Calon Klien'}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowOutreachModal(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-5 space-y-4">
+              {/* Contact & Task Context Banner */}
+              <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl space-y-1 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-600 font-medium">Nomor WhatsApp Tujuan:</span>
+                  <span className="font-mono font-bold text-emerald-800">{deal.contact_phone}</span>
+                </div>
+                {selectedTaskForOutreach && (
+                  <div className="flex items-center justify-between pt-1 border-t border-emerald-100">
+                    <span className="text-slate-600 font-medium">Aktivitas Terkait:</span>
+                    <span className="font-semibold text-amber-800 truncate max-w-[260px]">{selectedTaskForOutreach.title}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Draft Message Editor */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-bold text-slate-700">Draf Pesan Sapaan Sales</label>
+                  <button
+                    type="button"
+                    onClick={() => setOutreachMessage(generateOutreachGreeting(selectedTaskForOutreach))}
+                    className="text-[11px] text-emerald-700 hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    Reset Template
+                  </button>
+                </div>
+                <textarea
+                  rows={7}
+                  value={outreachMessage}
+                  onChange={(e) => setOutreachMessage(e.target.value)}
+                  placeholder="Tulis pesan sapaan untuk calon klien..."
+                  className="w-full text-xs p-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 leading-relaxed font-sans"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Draf ini dapat disesuaikan sebelum dikirim. Pesan akan dicatat ke riwayat interaksi kesepakatan secara otomatis.
+                </p>
+              </div>
+
+              {/* Hybrid Action Explainer Card */}
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-2">
+                <p className="font-semibold text-slate-800 flex items-center gap-1.5">
+                  <span>⚡</span> Pilihan Tindak Lanjut:
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                  <div className="p-2.5 rounded-lg bg-white border border-slate-200">
+                    <span className="font-bold text-indigo-700 block mb-0.5">1. Buka di Live Chat</span>
+                    <p className="text-slate-500 leading-tight">Menyiapkan percakapan di Live Chat Pre-Sales agar Anda dapat berdiskusi & negosiasi langsung secara real-time.</p>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-white border border-emerald-200">
+                    <span className="font-bold text-emerald-700 block mb-0.5">2. Kirim & Selesaikan</span>
+                    <p className="text-slate-500 leading-tight">1-Klik langsung mengirimkan sapaan via WA gateway dan otomatis menyelesaikan tugas follow-up ini.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Actions */}
+            <div className="px-5 py-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => setShowOutreachModal(false)}
+                disabled={sendingOutreach}
+                className="w-full sm:w-auto px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-200 transition order-3 sm:order-1 cursor-pointer"
+              >
+                Batal
+              </button>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto order-1 sm:order-2">
+                <button
+                  type="button"
+                  disabled={sendingOutreach || !outreachMessage.trim()}
+                  onClick={handleOpenInLiveChat}
+                  className="flex-1 sm:flex-none px-3.5 py-2 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 disabled:opacity-50 transition flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
+                  title="Buka di Live Chat Pre-Sales"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  Buka di Live Chat
+                </button>
+
+                <button
+                  type="button"
+                  disabled={sendingOutreach || !outreachMessage.trim()}
+                  onClick={handleSendAndCompleteOutreach}
+                  className="flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+                  title="Kirim pesan langsung dan tandai tugas selesai"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  {sendingOutreach ? 'Mengirim...' : 'Kirim & Selesaikan'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

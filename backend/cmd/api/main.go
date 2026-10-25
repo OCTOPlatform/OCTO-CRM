@@ -71,6 +71,8 @@ func main() {
 	inboxService.SetPillarService(pillarService)
 	inboxService.SetNotificationRepo(notificationRepo)
 	integrationService.SetPillarService(pillarService)
+	pillarService.SetDealRepo(dealRepo)
+	pillarService.SetTaskService(taskService)
 
 	// Handlers
 	authHandler := handler.NewAuthHandler(authService)
@@ -191,6 +193,7 @@ func main() {
 			wsRoutes.PATCH("/deals/:deal_id/stage", dealHandler.UpdateDealStage)
 			wsRoutes.DELETE("/deals/:deal_id", dealHandler.DeleteDeal)
 			wsRoutes.GET("/deals/:deal_id/activities", activityHandler.ListDealActivities)
+			wsRoutes.POST("/deals/:deal_id/whatsapp-outreach", pillarHandler.SendDealOutreachWhatsApp)
 
 			// Tasks
 			wsRoutes.GET("/tasks", taskHandler.ListTasks)

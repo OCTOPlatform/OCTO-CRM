@@ -404,6 +404,24 @@ class ApiClient {
     });
   }
 
+  async sendDealOutreachWhatsApp(
+    wsId: string,
+    dealId: string,
+    data: { task_id?: string; message: string; action: 'send_and_complete' | 'prepare_conversation' }
+  ) {
+    return this.request<{
+      conversation_id: string;
+      message_sent: boolean;
+      task_completed: boolean;
+      client_phone: string;
+      client_name: string;
+      text_sent: string;
+    }>(`/workspaces/${wsId}/deals/${dealId}/whatsapp-outreach`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
   // --- Tasks ---
   async listTasks(wsId: string, params: { due_filter?: string; status?: string; priority?: string; contact_id?: string; deal_id?: string } = {}) {
     const q = new URLSearchParams();

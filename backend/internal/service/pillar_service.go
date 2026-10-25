@@ -28,9 +28,19 @@ type PillarService struct {
 	userRepo     *repository.UserRepository
 	auditRepo    *repository.AuditRepository
 	activityRepo *repository.ActivityRepository
+	dealRepo     *repository.DealRepository
+	taskService  *TaskService
 	cfg          *config.Config
 	rrMu         sync.Mutex
 	rrIndex      map[string]int // workspaceID_department -> current index
+}
+
+func (s *PillarService) SetDealRepo(dr *repository.DealRepository) {
+	s.dealRepo = dr
+}
+
+func (s *PillarService) SetTaskService(ts *TaskService) {
+	s.taskService = ts
 }
 
 func NewPillarService(
@@ -237,6 +247,179 @@ func (s *PillarService) SendQuotationWhatsApp(workspaceID, userID, quotationID, 
 	_ = s.pillarRepo.UpdateQuotationStatus(workspaceID, quotationID, domain.QuotationStatusSent)
 
 	return messageText, nil
+}
+
+// SendDealOutreachWhatsApp performs pre-sales outreach (Send & Complete or Live Chat handoff)
+func (s *PillarService) SendDealOutreachWhatsApp(workspaceID, userID, dealID string, req domain.DealOutreachRequest) (*domain.DealOutreachResponse, error) {
+	if s.dealRepo == nil {
+		return nil, fmt.Errorf("deal repository not configured")
+	}
+
+	deal, err := s.dealRepo.GetDealByID(workspaceID, dealID)
+	if err != nil {
+		return nil, fmt.Errorf("deal tidak ditemukan: %w", err)
+	}
+
+	if deal.ContactPhone == nil || strings.TrimSpace(*deal.ContactPhone) == "" {
+		return nil, fmt.Errorf("calon klien belum memiliki nomor telepon WhatsApp")
+	}
+
+	cleanPhone := repository.NormalizePhone(*deal.ContactPhone)
+	clientName := "Calon Klien"
+	if deal.ContactName != nil && strings.TrimSpace(*deal.ContactName) != "" {
+		clientName = strings.TrimSpace(*deal.ContactName)
+	}
+
+	// 1. Get or Create conversation in Pre-Sales (sales department)
+	conv, err := s.inboxRepo.GetConversationByChannelIdentifier(workspaceID, domain.ChannelWhatsApp, cleanPhone)
+	if err != nil || conv == nil {
+		newConv := domain.Conversation{
+			ID:                uuid.New().String(),
+			WorkspaceID:       workspaceID,
+			ContactID:         deal.ContactID,
+			Channel:           domain.ChannelWhatsApp,
+			ChannelIdentifier: cleanPhone,
+			Department:        "sales",
+			Subject:           fmt.Sprintf("Prospek Pre-Sales: %s", clientName),
+			Status:            domain.ConversationStatusOpen,
+			AssignedToID:      &userID,
+			BotActive:         false,
+			LastMessageAt:     time.Now(),
+			CreatedAt:         time.Now(),
+			UpdatedAt:         time.Now(),
+		}
+		if err := s.inboxRepo.CreateConversation(&newConv); err == nil {
+			conv = &newConv
+		}
+	} else {
+		// Ensure assigned to current sales and in sales department
+		conv.Department = "sales"
+		conv.AssignedToID = &userID
+		conv.Status = domain.ConversationStatusOpen
+		_ = s.inboxRepo.UpdateConversationStatus(workspaceID, conv.ID, domain.ConversationStatusOpen)
+		_ = s.inboxRepo.UpdateConversationAssignment(workspaceID, conv.ID, &userID)
+	}
+
+	convID := ""
+	if conv != nil {
+		convID = conv.ID
+	}
+
+	// If action is only to prepare the conversation for Live Chat handoff
+	if req.Action == "prepare_conversation" {
+		return &domain.DealOutreachResponse{
+			ConversationID: convID,
+			MessageSent:    false,
+			TaskCompleted:  false,
+			ClientPhone:    cleanPhone,
+			ClientName:     clientName,
+			TextSent:       req.Message,
+		}, nil
+	}
+
+	// Action: "send_and_complete" (default)
+	user, _ := s.userRepo.GetUserByID(userID)
+	senderName := "Konsultan Sales"
+	if user != nil && user.FullName != "" {
+		senderName = user.FullName
+	}
+
+	// Create message in chat thread
+	if convID != "" {
+		msg := domain.Message{
+			ID:             uuid.New().String(),
+			ConversationID: convID,
+			SenderType:     "agent",
+			SenderID:       &userID,
+			SenderName:     senderName,
+			Content:        req.Message,
+			Channel:        "whatsapp",
+			Status:         "sent",
+			Metadata:       json.RawMessage("{}"),
+			CreatedAt:      time.Now(),
+		}
+		_ = s.inboxRepo.CreateMessage(&msg)
+	}
+
+	// Dispatch message via WAHA WhatsApp Gateway
+	sessionName := "default"
+	if ch, err := s.inboxRepo.GetWorkspaceChannelByUserID(workspaceID, userID); err == nil && ch != nil && ch.SessionName != "" {
+		sessionName = ch.SessionName
+	} else if ch, err := s.inboxRepo.GetWorkspaceChannel(workspaceID, "whatsapp"); err == nil && ch != nil && ch.SessionName != "" {
+		sessionName = ch.SessionName
+	}
+
+	wahaURL := s.cfg.WhatsAppGatewayURL
+	if wahaURL == "" {
+		wahaURL = "http://localhost:3005"
+	}
+	chatId := fmt.Sprintf("%s@c.us", cleanPhone)
+
+	go func() {
+		client := &http.Client{Timeout: 15 * time.Second}
+		payload := map[string]interface{}{
+			"session": sessionName,
+			"chatId":  chatId,
+			"text":    req.Message,
+		}
+		bodyBytes, err := json.Marshal(payload)
+		if err == nil {
+			reqHTTP, err := http.NewRequest("POST", fmt.Sprintf("%s/api/sendText", strings.TrimRight(wahaURL, "/")), bytes.NewBuffer(bodyBytes))
+			if err == nil {
+				reqHTTP.Header.Set("Content-Type", "application/json")
+				if s.cfg.WhatsAppToken != "" {
+					reqHTTP.Header.Set("X-Api-Key", s.cfg.WhatsAppToken)
+				}
+				_, _ = client.Do(reqHTTP)
+			}
+		}
+	}()
+
+	// Complete task if provided
+	taskCompleted := false
+	if req.TaskID != nil && strings.TrimSpace(*req.TaskID) != "" && s.taskService != nil {
+		taskID := strings.TrimSpace(*req.TaskID)
+		completedStatus := domain.TaskStatusCompleted
+		_, err := s.taskService.UpdateTask(workspaceID, userID, taskID, domain.UpdateTaskRequest{
+			Status: &completedStatus,
+		})
+		if err == nil {
+			taskCompleted = true
+		}
+	}
+
+	// Record activity in deal chatter
+	var contactIDStr string
+	if deal.ContactID != nil {
+		contactIDStr = *deal.ContactID
+	}
+	_ = s.activityRepo.CreateActivity(&domain.Activity{
+		WorkspaceID: workspaceID,
+		ContactID:   contactIDStr,
+		DealID:      &deal.ID,
+		UserID:      &userID,
+		Type:        domain.ActivityNote,
+		Subject:     fmt.Sprintf("Sapaan WhatsApp terkirim ke %s (%s)", clientName, cleanPhone),
+		Description: req.Message,
+	})
+
+	_ = s.auditRepo.LogEvent(&domain.AuditEvent{
+		WorkspaceID: workspaceID,
+		UserID:      &userID,
+		Action:      "deal_whatsapp_outreach_sent",
+		EntityType:  "deal",
+		EntityID:    deal.ID,
+		Description: fmt.Sprintf("Sent WhatsApp outreach to %s (%s)", clientName, cleanPhone),
+	})
+
+	return &domain.DealOutreachResponse{
+		ConversationID: convID,
+		MessageSent:    true,
+		TaskCompleted:  taskCompleted,
+		ClientPhone:    cleanPhone,
+		ClientName:     clientName,
+		TextSent:       req.Message,
+	}, nil
 }
 
 // ==========================================

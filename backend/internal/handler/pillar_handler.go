@@ -132,6 +132,26 @@ func (h *PillarHandler) SendQuotationWhatsApp(c *gin.Context) {
 	}))
 }
 
+func (h *PillarHandler) SendDealOutreachWhatsApp(c *gin.Context) {
+	wsID := getWorkspaceID(c)
+	userID := getUserID(c)
+	dealID := c.Param("deal_id")
+
+	var req domain.DealOutreachRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, domain.ErrorResponse("INVALID_REQUEST_BODY: "+err.Error()))
+		return
+	}
+
+	resp, err := h.pillarService.SendDealOutreachWhatsApp(wsID, userID, dealID, req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, domain.ErrorResponse(err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, domain.SuccessResponse(resp, "Outreach WhatsApp berhasil diproses"))
+}
+
 // ==========================================
 // PILAR 2: WHATSAPP BROADCAST HANDLERS
 // ==========================================
