@@ -276,6 +276,93 @@ def main():
         }
     run_test("Atomic Lead Intake Ingestion Contract (POST /integrations/lead-intake)", test_lead_intake_atomic)
 
+    # 20. Public WebChat Inbound & Auto-Ticket Creation with Round-Robin Routing
+    chat_ticket = {}
+    def test_webchat_auto_ticket_round_robin():
+        vid = f"visitor-e2e-{int(time.time())}"
+        status, data = http_req("POST", f"/api/v1/workspaces/{ws_id}/inbox/webchat/send", {
+            "visitor_id": vid,
+            "name": "Pak Kurniawan",
+            "email": "kurniawan@e2e-test.com",
+            "phone": "081299887766",
+            "message": "Halo CS OCTO, saya butuh bantuan setting integrasi."
+        })
+        assert status == 201, f"Expected 201 Created, got {status}"
+        assert data.get("success") is True, "Expected success: true"
+        conv_id = data["data"]["conversation_id"]
+
+        # Verify Ticket Created in Backend
+        t_status, t_data = http_req("GET", f"/api/v1/workspaces/{ws_id}/tickets", token=token)
+        assert t_status == 200, f"Expected 200, got {t_status}"
+        tickets = t_data.get("data", [])
+        matched = [t for t in tickets if t.get("conversation_id") == conv_id]
+        assert len(matched) > 0, "Expected auto-created ticket linked to conversation"
+        ticket = matched[0]
+        assert ticket.get("department") == "support", "Expected ticket department to be 'support'"
+        assert ticket.get("assigned_to_id") is not None, "Expected ticket to be auto-assigned via Round-Robin"
+
+        chat_ticket["ticket_id"] = ticket["id"]
+        chat_ticket["ticket_number"] = ticket["ticket_number"]
+        chat_ticket["assigned_to_name"] = ticket.get("assigned_to_name")
+        chat_ticket["conv_id"] = conv_id
+        chat_ticket["visitor_id"] = vid
+        return {
+            "ticket_number": ticket["ticket_number"],
+            "assigned_to": ticket.get("assigned_to_name"),
+            "conversation_id": conv_id
+        }
+    run_test("Public WebChat & Auto-Ticket Round-Robin Routing (POST /inbox/webchat/send)", test_webchat_auto_ticket_round_robin)
+
+    # 21. Rule C: Single Active Ticket Deduplication for Inbound Messages
+    def test_single_active_ticket_dedup():
+        vid = chat_ticket.get("visitor_id")
+        conv_id = chat_ticket.get("conv_id")
+        status, data = http_req("POST", f"/api/v1/workspaces/{ws_id}/inbox/webchat/send", {
+            "visitor_id": vid,
+            "name": "Pak Kurniawan",
+            "message": "Pesan susulan: saya lampirkan juga screenshot kendala saya."
+        })
+        assert status == 201, f"Expected 201 Created, got {status}"
+
+        # Verify still exactly 1 ticket for this conversation
+        t_status, t_data = http_req("GET", f"/api/v1/workspaces/{ws_id}/tickets", token=token)
+        assert t_status == 200
+        tickets = t_data.get("data", [])
+        matched = [t for t in tickets if t.get("conversation_id") == conv_id]
+        assert len(matched) == 1, f"Expected exactly 1 ticket, found {len(matched)}"
+        return {"ticket_id": matched[0]["id"], "status": matched[0]["status"], "rule": "Single active ticket preserved"}
+    run_test("Lifecycle Rule C: Single Active Ticket Deduplication", test_single_active_ticket_dedup)
+
+    # 22. Public WebChat History Retrieval Endpoint
+    def test_webchat_history_polling():
+        vid = chat_ticket.get("visitor_id")
+        status, data = http_req("GET", f"/api/v1/workspaces/{ws_id}/inbox/webchat/messages?visitor_id={vid}")
+        assert status == 200, f"Expected 200, got {status}"
+        res = data.get("data", {})
+        assert "messages" in res, "Expected messages array"
+        assert len(res["messages"]) >= 2, f"Expected at least 2 messages, got {len(res['messages'])}"
+        return {"messages_count": len(res["messages"]), "assigned_to": res.get("assigned_to_name")}
+    run_test("Public WebChat Visitor Polling Endpoint (GET /inbox/webchat/messages)", test_webchat_history_polling)
+
+    # 23. Hybrid Pull Model: CS Claim Ticket (POST /tickets/:id/claim)
+    def test_cs_claim_ticket():
+        ticket_id = chat_ticket.get("ticket_id")
+        # Login as CS Siti
+        l_status, l_data = http_req("POST", "/api/v1/auth/login", {
+            "email": "siti@octocrm.id",
+            "password": "password123"
+        })
+        assert l_status == 200, f"Expected 200, got {l_status}"
+        siti_token = l_data["data"]["token"]
+
+        c_status, c_data = http_req("POST", f"/api/v1/workspaces/{ws_id}/tickets/{ticket_id}/claim", token=siti_token)
+        assert c_status == 200, f"Expected 200, got {c_status}"
+        claimed_ticket = c_data.get("data", {})
+        assert claimed_ticket.get("assigned_to_id") == "22222222-2222-2222-2222-222222222222", "Expected Siti to be the new assigned agent"
+        assert claimed_ticket.get("assigned_to_name") == "Siti Rahmawati"
+        return {"ticket_number": claimed_ticket.get("ticket_number"), "new_assignee": claimed_ticket.get("assigned_to_name")}
+    run_test("Hybrid Action: CS Claim Ticket (POST /tickets/:id/claim)", test_cs_claim_ticket)
+
     print("\n--------------------------------------------------")
     passed = sum(1 for r in TEST_RESULTS if r["status"] == "PASSED")
     total = len(TEST_RESULTS)

@@ -174,6 +174,12 @@ export default function InboxPage() {
     if (url.startsWith('http://') || url.startsWith('https://')) return url;
     return `${apiHostUrl}${url.startsWith('/') ? '' : '/'}${url}`;
   };
+
+  const formatPhoneNumber = (num?: string) => {
+    if (!num) return '-';
+    const clean = num.replace(/^\++/, '');
+    return `+${clean}`;
+  };
   const [wahaStatus, setWahaStatus] = useState<string>('checking');
   const [connectedPhone, setConnectedPhone] = useState<string>('');
   const [connectedName, setConnectedName] = useState<string>('');
@@ -245,6 +251,33 @@ export default function InboxPage() {
   };
 
   const handleOpenBroadcastModal = async () => {
+    // Otomatis sesuaikan divisi pengirim broadcast dengan role / divisi pengguna
+    const targetDept: 'sales' | 'support' =
+      activeRole === 'support' || deptFilter === 'support' || currentWorkspace?.department === 'support'
+        ? 'support'
+        : 'sales';
+
+    setBroadcastDept(targetDept);
+    if (targetDept === 'support') {
+      if (broadcastName === 'Promo Spesial OCTO Bulan Ini' || !broadcastName) {
+        setBroadcastName('Pengumuman Layanan Pelanggan (CS)');
+      }
+      if (broadcastMessage.includes('promo diskon khusus 20%') || !broadcastMessage) {
+        setBroadcastMessage(
+          'Halo {{first_name}} dari {{company}}! Kami menginformasikan pembaruan jadwal operasional dan peningkatan layanan Customer Support OCTO. Tim CS kami siap membantu kendala Anda 24/7. Hubungi kami jika ada pertanyaan ya!'
+        );
+      }
+    } else {
+      if (broadcastName === 'Pengumuman Layanan Pelanggan (CS)' || !broadcastName) {
+        setBroadcastName('Promo Spesial OCTO Bulan Ini');
+      }
+      if (broadcastMessage.includes('peningkatan layanan Customer Support') || !broadcastMessage) {
+        setBroadcastMessage(
+          'Halo {{first_name}} dari {{company}}! Kami ada promo diskon khusus 20% untuk solusi CRM & WhatsApp Omnichannel. Hubungi kami untuk klaim promo Anda ya!'
+        );
+      }
+    }
+
     setShowBroadcastModal(true);
     if (!currentWorkspace) return;
     try {
@@ -1639,11 +1672,11 @@ export default function InboxPage() {
                       </div>
                       <span
                         className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[10px] text-white shadow-2xs ${
-                          isWA ? 'bg-emerald-500' : 'bg-indigo-600'
+                          conv.channel === 'whatsapp' ? 'bg-emerald-500' : conv.channel === 'webchat' ? 'bg-[#00AFC4]' : 'bg-indigo-600'
                         }`}
-                        title={isWA ? 'WhatsApp' : 'Email'}
+                        title={conv.channel === 'whatsapp' ? 'WhatsApp' : conv.channel === 'webchat' ? 'Live Chat Web' : 'Email'}
                       >
-                        {isWA ? 'W' : '@'}
+                        {conv.channel === 'whatsapp' ? 'W' : conv.channel === 'webchat' ? '💬' : '@'}
                       </span>
                     </div>
 
@@ -1737,81 +1770,74 @@ export default function InboxPage() {
         {activeConv ? (
           <div className="flex-1 flex flex-col bg-[#F3F4F6] overflow-hidden">
             {/* Chat Room Header */}
-            <div className="bg-white border-b border-slate-200 shrink-0 shadow-2xs">
-              {/* Row 1: Contact Info & Primary CRM Actions */}
-              <div className="px-4 py-2.5 flex items-center justify-between gap-2 border-b border-slate-100">
-                <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                  <div className="w-9 h-9 rounded-full bg-[#00AFC4] text-white font-bold flex items-center justify-center text-sm shadow-xs shrink-0">
-                    {activeConv.contact_name ? activeConv.contact_name.charAt(0) : 'C'}
+            <div className="bg-white border-b border-slate-200 shrink-0 shadow-xs">
+              {/* Row 1: Contact Identity & Main Conversation Actions */}
+              <div className="px-4 py-3 flex items-center justify-between gap-3 border-b border-slate-100">
+                {/* Left: Contact Details */}
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="relative shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-linear-to-br from-[#00AFC4] to-[#008999] text-white font-bold flex items-center justify-center text-sm shadow-xs">
+                      {activeConv.contact_name ? activeConv.contact_name.charAt(0).toUpperCase() : 'C'}
+                    </div>
+                    <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white" title="Aktif" />
                   </div>
+
                   <div className="min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <h2 className="font-bold text-xs sm:text-sm text-slate-900 truncate">
+                    <div className="flex items-center gap-2">
+                      <h2 className="font-bold text-sm text-slate-900 truncate max-w-[180px] sm:max-w-[260px]" title={activeConv.contact_name || activeConv.channel_identifier}>
                         {activeConv.contact_name || activeConv.channel_identifier}
                       </h2>
                       <span
-                        className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
                           activeConv.channel === 'whatsapp'
                             ? 'bg-emerald-100 text-emerald-800'
+                            : activeConv.channel === 'webchat'
+                            ? 'bg-cyan-100 text-[#008999]'
                             : 'bg-indigo-100 text-indigo-800'
                         }`}
                       >
-                        {activeConv.channel === 'whatsapp' ? 'WA' : 'Email'}
+                        {activeConv.channel === 'whatsapp' ? 'WhatsApp' : activeConv.channel === 'webchat' ? 'Live Chat Web' : 'Email'}
                       </span>
-                      {activeConv.bot_active ? (
-                        <span className="flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                          <Bot className="w-2.5 h-2.5" />
-                          Bot Membalas
-                        </span>
-                      ) : activeConv.bot_handoff_reason ? (
-                        <span className="flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300 animate-pulse">
-                          ⚠️ Perlu CS
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                          CS Manusia
-                        </span>
-                      )}
                     </div>
-                    <span className="text-[10px] text-slate-400 truncate block">
-                      {activeConv.channel_identifier} {activeConv.company_name ? `• ${activeConv.company_name}` : ''}
+                    <span className="text-[11px] text-slate-500 truncate block mt-0.5">
+                      {formatPhoneNumber(activeConv.channel_identifier)} {activeConv.company_name ? `• ${activeConv.company_name}` : ''}
                     </span>
                   </div>
                 </div>
 
-                {/* Primary CRM Actions (Compact) */}
+                {/* Right: Grouped Actions */}
                 <div className="flex items-center gap-1.5 shrink-0">
+                  {/* Bot Control */}
                   {activeConv.bot_active ? (
                     <button
                       type="button"
                       onClick={() => handleToggleBot(false)}
-                      className="px-2 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition flex items-center gap-1 cursor-pointer shadow-2xs"
-                      title="Chatbot sedang aktif. Klik untuk mengambil alih ke agen CS manusia."
+                      className="px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+                      title="Chatbot sedang aktif membalas. Klik untuk alihkan penanganan ke agen CS manusia."
                     >
                       <Bot className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">Ambil Alih CS</span>
+                      <span>Alihkan ke CS</span>
                     </button>
                   ) : (
                     <button
                       type="button"
                       onClick={() => handleToggleBot(true)}
-                      className="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-300 transition flex items-center gap-1 cursor-pointer shadow-2xs"
-                      title="Klik untuk mengaktifkan kembali chatbot otomatis."
+                      className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-300 transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                      title="Klik untuk mengaktifkan kembali bot cerdas otomatis."
                     >
                       <Bot className="w-3.5 h-3.5 text-slate-500" />
-                      <span className="hidden sm:inline">Aktifkan Bot</span>
+                      <span>Nyalakan Bot</span>
                     </button>
                   )}
 
                   {isSupervisorOrAdmin && (
                     <Link
                       href="/settings?tab=chatbot"
-                      className="px-2 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-[#00AFC4] text-xs font-bold border border-teal-200 transition flex items-center gap-1 cursor-pointer shadow-2xs"
+                      className="px-2.5 py-1.5 rounded-lg bg-teal-50 hover:bg-teal-100 text-[#00AFC4] text-xs font-bold border border-teal-200 transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
                       title="Kelola & Sesuaikan Template Chatbot Perusahaan (Khusus Admin/Owner)"
                     >
                       <Settings className="w-3.5 h-3.5" />
-                      <span className="hidden md:inline">Template Bot</span>
+                      <span className="hidden sm:inline">Template Bot</span>
                     </Link>
                   )}
 
@@ -1819,12 +1845,14 @@ export default function InboxPage() {
                     type="button"
                     onClick={handleSummarizeChat}
                     disabled={summarizing}
-                    className="px-2 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition flex items-center gap-1 border border-indigo-200 cursor-pointer shadow-2xs disabled:opacity-50"
+                    className="px-2.5 py-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold transition flex items-center gap-1.5 border border-purple-200 cursor-pointer shadow-2xs disabled:opacity-50"
                     title="Gunakan AI untuk meringkas percakapan dan deteksi sentimen klien"
                   >
-                    <Sparkles className={`w-3.5 h-3.5 text-indigo-600 ${summarizing ? 'animate-spin' : ''}`} />
-                    <span className="hidden sm:inline">{summarizing ? 'Meringkas...' : 'Ringkas AI'}</span>
+                    <Sparkles className={`w-3.5 h-3.5 text-purple-600 ${summarizing ? 'animate-spin' : ''}`} />
+                    <span className="hidden md:inline">{summarizing ? 'Meringkas...' : 'Ringkas AI'}</span>
                   </button>
+
+                  <div className="h-5 w-px bg-slate-200 mx-0.5 hidden sm:block" />
 
                   {/* Tombol Buat Peluang Pipeline (Khusus Pre-Sales & Owner/Admin) */}
                   {activeRole !== 'support' && currentWorkspace?.department !== 'support' && (
@@ -1833,7 +1861,7 @@ export default function InboxPage() {
                         setDealTitle(`Kesepakatan - ${activeConv.contact_name || activeConv.channel_identifier}`);
                         setShowConvertModal(true);
                       }}
-                      className="px-2.5 py-1 rounded-lg bg-[#00AFC4] hover:bg-[#0096a8] text-white text-xs font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer"
+                      className="px-2.5 py-1.5 rounded-lg bg-[#00AFC4] hover:bg-[#0096a8] text-white text-xs font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer"
                       title="Jadikan prospek ini sebagai peluang baru di Pipeline (Pre-Sales)"
                     >
                       <TrendingUp className="w-3.5 h-3.5" />
@@ -1850,7 +1878,7 @@ export default function InboxPage() {
                         setTicketDesc(lastMsg);
                         setShowTicketModal(true);
                       }}
-                      className="px-2.5 py-1 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer"
+                      className="px-2.5 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer"
                       title="Jadikan obrolan ini sebagai Tiket Bantuan CS (After-Sales Helpdesk)"
                     >
                       <LifeBuoy className="w-3.5 h-3.5" />
@@ -1860,10 +1888,10 @@ export default function InboxPage() {
 
                   <button
                     onClick={handleToggleStatus}
-                    className={`px-2 py-1 rounded-lg text-xs font-semibold border transition cursor-pointer ${
+                    className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer ${
                       activeConv.status === 'open'
                         ? 'border-slate-300 text-slate-700 hover:bg-slate-100'
-                        : 'border-emerald-300 bg-emerald-50 text-emerald-800'
+                        : 'border-emerald-300 bg-emerald-50 text-emerald-800 font-bold'
                     }`}
                   >
                     {activeConv.status === 'open' ? 'Selesai' : 'Buka'}
@@ -1878,7 +1906,7 @@ export default function InboxPage() {
                       )
                     }
                     disabled={deletingConv}
-                    className="p-1 rounded-lg text-xs font-semibold border border-rose-200 text-rose-600 hover:bg-rose-50 transition cursor-pointer shadow-2xs"
+                    className="p-1.5 rounded-lg text-xs font-semibold border border-rose-200 text-rose-600 hover:bg-rose-50 transition cursor-pointer shadow-2xs"
                     title="Hapus obrolan ini dari CRM"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -1887,39 +1915,58 @@ export default function InboxPage() {
               </div>
 
               {/* Row 2: Governance, Assignment & Priority Control Bar */}
-              <div className="px-4 py-2 bg-slate-50 flex items-center justify-between gap-2 text-xs flex-wrap">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider shrink-0 flex items-center gap-1">
-                    <ShieldCheck className="w-3.5 h-3.5 text-cyan-600" />
-                    <span>Tata Kelola:</span>
-                  </span>
+              <div className="px-4 py-2 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-3 text-xs overflow-x-auto no-scrollbar">
+                <div className="flex items-center gap-3 shrink-0">
+                  {/* Status Penanganan */}
+                  {activeConv.bot_active ? (
+                    <span className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 shrink-0">
+                      <Bot className="w-3 h-3" />
+                      <span>Bot Menjawab</span>
+                    </span>
+                  ) : activeConv.bot_handoff_reason ? (
+                    <span className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300 animate-pulse shrink-0">
+                      <AlertTriangle className="w-3 h-3 text-amber-600" />
+                      <span>Perlu CS Manusia</span>
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                      <span>CS Manusia</span>
+                    </span>
+                  )}
+
+                  <div className="h-4 w-px bg-slate-200 shrink-0" />
 
                   {/* Priority Selector */}
-                  <select
-                    value={activeConv.priority || 'medium'}
-                    onChange={(e) => handlePriorityChange(activeConv.id, e.target.value)}
-                    className={`text-xs font-bold px-2 py-1 rounded-lg border shadow-2xs focus:outline-hidden cursor-pointer ${
-                      activeConv.priority === 'urgent'
-                        ? 'bg-rose-50 text-rose-700 border-rose-300'
-                        : activeConv.priority === 'high'
-                        ? 'bg-amber-50 text-amber-700 border-amber-300'
-                        : 'bg-white text-slate-700 border-slate-300'
-                    }`}
-                    title="Ubah prioritas penanganan"
-                  >
-                    <option value="urgent">🔴 Urgent</option>
-                    <option value="high">🟠 Prioritas Tinggi</option>
-                    <option value="medium">🟡 Normal</option>
-                    <option value="low">🟢 Rendah</option>
-                  </select>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="text-[11px] text-slate-500 font-medium">Prioritas:</span>
+                    <select
+                      value={activeConv.priority || 'medium'}
+                      onChange={(e) => handlePriorityChange(activeConv.id, e.target.value)}
+                      className={`text-xs font-bold px-2 py-1 rounded-md border shadow-2xs focus:outline-hidden cursor-pointer ${
+                        activeConv.priority === 'urgent'
+                          ? 'bg-rose-50 text-rose-700 border-rose-300'
+                          : activeConv.priority === 'high'
+                          ? 'bg-amber-50 text-amber-700 border-amber-300'
+                          : 'bg-white text-slate-700 border-slate-300'
+                      }`}
+                      title="Ubah prioritas penanganan"
+                    >
+                      <option value="urgent">🔴 Urgent</option>
+                      <option value="high">🟠 Prioritas Tinggi</option>
+                      <option value="medium">🟡 Normal</option>
+                      <option value="low">🟢 Rendah</option>
+                    </select>
+                  </div>
 
                   {/* Quick Assign Dropdown */}
-                  <div className="flex items-center gap-1">
-                    <span className="text-[10px] text-slate-400 font-medium">Agen:</span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Users className="w-3.5 h-3.5 text-slate-400" />
+                    <span className="text-[11px] text-slate-500 font-medium">Agen CS:</span>
                     <select
                       value={activeConv.assigned_to_id || ''}
                       onChange={(e) => handleQuickAssign(activeConv.id, e.target.value || undefined)}
-                      className="text-xs font-semibold px-2 py-1 rounded-lg bg-white border border-slate-300 text-slate-700 shadow-2xs focus:outline-hidden cursor-pointer max-w-[140px] truncate"
+                      className="text-xs font-semibold px-2 py-1 rounded-md bg-white border border-slate-300 text-slate-700 shadow-2xs focus:outline-hidden cursor-pointer max-w-[150px] truncate"
                       title="Tugaskan percakapan ke anggota tim"
                     >
                       <option value="">⚠️ Belum Ditugaskan</option>
@@ -1933,21 +1980,21 @@ export default function InboxPage() {
                 </div>
 
                 {/* Governance Action Buttons */}
-                <div className="flex items-center gap-1.5 shrink-0">
+                <div className="flex items-center gap-2 shrink-0">
                   <button
                     type="button"
                     onClick={() => setShowTakeoverModal(true)}
-                    className="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold transition flex items-center gap-1 border border-amber-300 cursor-pointer shadow-2xs"
-                    title="Ambil alih percakapan (Take Over) dengan alasan bisnis tercatat di audit trail"
+                    className="px-2.5 py-1 rounded-md bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-semibold transition flex items-center gap-1 border border-amber-300 cursor-pointer shadow-2xs"
+                    title="Ambil alih penugasan staf lain dengan alasan bisnis tercatat di audit trail"
                   >
                     <UserCheck className="w-3.5 h-3.5 text-amber-700" />
-                    <span>Ambil Alih</span>
+                    <span>Ambil Alih Penugasan</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setShowEscalateModal(true)}
-                    className="px-2.5 py-1 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold transition flex items-center gap-1 border border-purple-300 cursor-pointer shadow-2xs"
+                    className="px-2.5 py-1 rounded-md bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-semibold transition flex items-center gap-1 border border-purple-300 cursor-pointer shadow-2xs"
                     title="Eskalasi percakapan ini ke supervisor atau owner"
                   >
                     <Zap className="w-3.5 h-3.5 text-purple-600" />
@@ -2236,10 +2283,14 @@ export default function InboxPage() {
                   <span className="flex items-center gap-1.5">
                     <span
                       className={`w-2 h-2 rounded-full ${
-                        activeConv.channel === 'whatsapp' ? 'bg-emerald-500' : 'bg-indigo-500'
+                        activeConv.channel === 'whatsapp' ? 'bg-emerald-500' : activeConv.channel === 'webchat' ? 'bg-[#00AFC4]' : 'bg-indigo-500'
                       }`}
                     ></span>
-                    Membalas via WhatsApp dari nomor <strong>{businessNumber}</strong> ke <strong>{activeConv.channel_identifier}</strong>
+                    {activeConv.channel === 'webchat' ? (
+                      <span>Membalas via Live Chat Website ke <strong>{activeConv.channel_identifier}</strong></span>
+                    ) : (
+                      <span>Membalas via WhatsApp dari nomor <strong>{formatPhoneNumber(businessNumber)}</strong> ke <strong>{formatPhoneNumber(activeConv.channel_identifier)}</strong></span>
+                    )}
                   </span>
                   <span className="text-slate-400">Tekan Kirim atau Enter</span>
                 </div>
@@ -2337,7 +2388,7 @@ export default function InboxPage() {
             <MessageSquare className="w-12 h-12 mb-3 text-slate-300" />
             <h3 className="font-bold text-slate-700 text-sm">Pilih Percakapan untuk Memulai</h3>
             <p className="text-xs text-slate-400 mt-1 max-w-sm">
-              Semua pesan masuk dari WhatsApp ke nomor <strong>{businessNumber}</strong> akan langsung terhubung ke sini dan dapat dibalas seketika.
+              Semua pesan masuk dari WhatsApp ke nomor <strong>{formatPhoneNumber(businessNumber)}</strong> akan langsung terhubung ke sini dan dapat dibalas seketika.
             </p>
           </div>
         )}
@@ -2598,7 +2649,7 @@ export default function InboxPage() {
                 <div className="text-xs bg-black/15 p-3.5 rounded-xl space-y-1.5">
                   <div className="flex justify-between items-center py-0.5 border-b border-white/10">
                     <span className="text-emerald-100">Nomor Tertaut:</span>
-                    <span className="font-bold font-mono">+{connectedPhone || businessNumber.replace(/^\+/, '')}</span>
+                    <span className="font-bold font-mono">{formatPhoneNumber(connectedPhone || businessNumber)}</span>
                   </div>
                   {connectedName && (
                     <div className="flex justify-between items-center py-0.5">
@@ -3041,14 +3092,64 @@ export default function InboxPage() {
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">Divisi Pengirim</label>
-                      <select
-                        value={broadcastDept}
-                        onChange={(e: any) => setBroadcastDept(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs bg-white"
-                      >
-                        <option value="sales">Pre-Sales (Penawaran & Promosi)</option>
-                        <option value="support">After-Sales (Pengumuman CS & Maintenance)</option>
-                      </select>
+                      {activeRole === 'owner' && deptFilter === 'all' ? (
+                        <div className="flex items-center p-0.5 bg-slate-100 rounded-xl text-xs font-bold text-slate-600 h-[38px]">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setBroadcastDept('sales');
+                              setBroadcastName('Promo Spesial OCTO Bulan Ini');
+                              setBroadcastMessage(
+                                'Halo {{first_name}} dari {{company}}! Kami ada promo diskon khusus 20% untuk solusi CRM & WhatsApp Omnichannel. Hubungi kami untuk klaim promo Anda ya!'
+                              );
+                            }}
+                            className={`flex-1 py-1.5 rounded-lg transition text-center cursor-pointer ${
+                              broadcastDept === 'sales'
+                                ? 'bg-[#00AFC4] text-white shadow-2xs font-extrabold'
+                                : 'hover:text-slate-900'
+                            }`}
+                          >
+                            Pre-Sales
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setBroadcastDept('support');
+                              setBroadcastName('Pengumuman Layanan Pelanggan (CS)');
+                              setBroadcastMessage(
+                                'Halo {{first_name}} dari {{company}}! Kami menginformasikan pembaruan jadwal operasional dan peningkatan layanan Customer Support OCTO. Tim CS kami siap membantu kendala Anda 24/7. Hubungi kami jika ada pertanyaan ya!'
+                              );
+                            }}
+                            className={`flex-1 py-1.5 rounded-lg transition text-center cursor-pointer ${
+                              broadcastDept === 'support'
+                                ? 'bg-purple-600 text-white shadow-2xs font-extrabold'
+                                : 'hover:text-slate-900'
+                            }`}
+                          >
+                            After-Sales (CS)
+                          </button>
+                        </div>
+                      ) : broadcastDept === 'support' ? (
+                        <div className="flex items-center justify-between px-3 py-2 bg-purple-50 border border-purple-200/80 rounded-xl text-xs font-bold text-purple-700 h-[38px]">
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-purple-600"></span>
+                            <span>Divisi: After-Sales (CS)</span>
+                          </div>
+                          <span className="text-[10px] font-semibold bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded">
+                            Khusus CS
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between px-3 py-2 bg-cyan-50 border border-cyan-200/80 rounded-xl text-xs font-bold text-[#008A9B] h-[38px]">
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-[#00AFC4]"></span>
+                            <span>Divisi: Pre-Sales</span>
+                          </div>
+                          <span className="text-[10px] font-semibold bg-cyan-100 text-cyan-800 px-1.5 py-0.5 rounded">
+                            Khusus Sales
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
 

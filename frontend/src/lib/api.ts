@@ -814,6 +814,44 @@ class ApiClient {
     });
   }
 
+  async claimTicket(wsId: string, ticketId: string) {
+    return this.request<Ticket>(`/workspaces/${wsId}/tickets/${ticketId}/claim`, {
+      method: 'POST',
+    });
+  }
+
+  async sendPublicWebChatMessage(
+    wsId: string,
+    data: { visitor_id: string; name: string; phone?: string; email?: string; message: string }
+  ) {
+    return this.request<{
+      conversation_id: string;
+      message_id: string;
+      sender_name: string;
+      content: string;
+      created_at: string;
+    }>(`/workspaces/${wsId}/inbox/webchat/send`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getPublicWebChatHistory(wsId: string, visitorId: string) {
+    return this.request<{
+      conversation_id: string;
+      ticket_number?: string;
+      assigned_to_name?: string;
+      status: string;
+      messages: Array<{
+        id: string;
+        sender_type: 'customer' | 'agent';
+        sender_name: string;
+        content: string;
+        created_at: string;
+      }>;
+    }>(`/workspaces/${wsId}/inbox/webchat/messages?visitor_id=${encodeURIComponent(visitorId)}`);
+  }
+
   async getSupportReport(wsId: string) {
     return this.request<SupportReportResponse>(`/workspaces/${wsId}/reports/support`);
   }

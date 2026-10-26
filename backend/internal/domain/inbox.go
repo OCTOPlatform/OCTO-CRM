@@ -144,6 +144,8 @@ type IncomingWebhookRequest struct {
 	AssignedToID     *string             `json:"assigned_to_id"`
 	SenderName       string              `json:"sender_name" binding:"required"`
 	SenderIdentifier string              `json:"sender_identifier" binding:"required"`
+	Email            string              `json:"email"`
+	Phone            string              `json:"phone"`
 	Content          string              `json:"content"`
 	Subject          string              `json:"subject"`
 	AttachmentURL    string              `json:"attachment_url"`
@@ -151,6 +153,30 @@ type IncomingWebhookRequest struct {
 	AttachmentType   string              `json:"attachment_type"`
 	MimeType         string              `json:"mime_type"`
 	FileSize         int64               `json:"file_size"`
+}
+
+type PublicWebChatSendRequest struct {
+	VisitorID string `json:"visitor_id" binding:"required"`
+	Name      string `json:"name" binding:"required"`
+	Phone     string `json:"phone"`
+	Email     string `json:"email"`
+	Message   string `json:"message" binding:"required"`
+}
+
+type PublicWebChatMessageItem struct {
+	ID         string    `json:"id"`
+	SenderType string    `json:"sender_type"` // 'customer' or 'agent'
+	SenderName string    `json:"sender_name"`
+	Content    string    `json:"content"`
+	CreatedAt  time.Time `json:"created_at"`
+}
+
+type PublicWebChatHistoryResponse struct {
+	ConversationID string                     `json:"conversation_id"`
+	TicketNumber   string                     `json:"ticket_number,omitempty"`
+	AssignedToName string                     `json:"assigned_to_name,omitempty"`
+	Status         string                     `json:"status"`
+	Messages       []PublicWebChatMessageItem `json:"messages"`
 }
 
 type AttachmentUploadResponse struct {

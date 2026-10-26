@@ -88,8 +88,12 @@ export default function SettingsPage() {
 
   // IFA Developer Documentation Modal
   const [showIFAModal, setShowIFAModal] = useState(false);
+  const [ifaCategory, setIfaCategory] = useState<'livechat' | 'forms'>('livechat');
   const [ifaTab, setIfaTab] = useState<'js' | 'elementor' | 'php' | 'curl' | 'schema'>('js');
+  const [ifaChatTab, setIfaChatTab] = useState<'react' | 'vanilla' | 'api'>('react');
   const [copiedIFAText, setCopiedIFAText] = useState(false);
+  const [copiedWsId, setCopiedWsId] = useState(false);
+  const [copiedApiUrl, setCopiedApiUrl] = useState(false);
 
   // Invite modal
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -101,6 +105,11 @@ export default function SettingsPage() {
   const [inviteSuccessData, setInviteSuccessData] = useState<WorkspaceInvitation | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedWA, setCopiedWA] = useState(false);
+
+  const apiBaseUrl =
+    typeof window !== 'undefined'
+      ? `${window.location.protocol}//${window.location.host.replace(':3000', ':8080')}/api/v1`
+      : 'https://api-crm.octocrm.id/api/v1';
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -1342,13 +1351,13 @@ export default function SettingsPage() {
                   <div>
                     <h3 className="font-bold text-sm text-[#142740]">
                       {isOctoTechnologies
-                        ? 'Ecosystem Lead Intake (OCTO-WEB & OCTO-TAP NFC)'
-                        : 'Integrasi Formulir Website (Inbound Leads Webhook)'}
+                        ? 'Integrasi Ekosistem Web: Live Chat Widget & Lead Intake (OCTO-WEB)'
+                        : 'Integrasi Website: Live Chat Widget & Formulir Kontak (IFA Webhook)'}
                     </h3>
                     <p className="text-xs text-[#586779]">
                       {isOctoTechnologies
-                        ? 'Khusus PT OCTO Technologies Indonesia: Integrasi tap kartu pintar NFC expo & form landing page web OCTO'
-                        : 'Hubungkan formulir kontak atau landing page website perusahaan Anda agar calon klien otomatis masuk ke CRM'}
+                        ? 'Khusus PT OCTO Technologies Indonesia: Integrasi widget live chat real-time, form intake web, dan kartu NFC OCTO-TAP'
+                        : 'Hubungkan widget Live Chat interaktif ke CS Omnichannel dan pasang formulir kontak website untuk auto-create prospek/deals'}
                     </p>
                   </div>
                 </div>
@@ -1382,36 +1391,62 @@ export default function SettingsPage() {
                 </div>
               )}
 
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-2">
-                <div className="text-slate-700 font-semibold flex items-center justify-between">
-                  <span>
-                    {isOctoTechnologies
-                      ? 'Endpoint Webhook Publik untuk Website / NFC Card'
-                      : 'Endpoint Webhook Publik untuk Formulir Website Perusahaan Anda'}
-                  </span>
-                  <span className="font-mono text-[10px] bg-slate-200 px-2 py-0.5 rounded">POST JSON</span>
-                </div>
-                <div className="font-mono text-[11px] text-slate-600 bg-white p-2 rounded-lg border border-slate-200 select-all overflow-x-auto">
-                  {typeof window !== 'undefined'
-                    ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1'}/workspaces/${currentWorkspace?.id}/integrations/lead-intake`
-                    : `/api/v1/workspaces/${currentWorkspace?.id}/integrations/lead-intake`}
-                </div>
-                {!isOctoTechnologies && (
-                  <p className="text-[11px] text-slate-500">
-                    Kirimkan payload JSON berisi <code>full_name</code>, <code>phone</code>, <code>email</code>, <code>company_name</code>, dan <code>message</code> saat pengunjung website Anda mengirim formulir kontak.
+              {/* Grid 2 Integrasi Website */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* 1. Live Chat Widget */}
+                <div className="p-3.5 bg-teal-50/50 border border-teal-200/70 rounded-xl text-xs space-y-2">
+                  <div className="text-slate-800 font-semibold flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-teal-800">
+                      <MessageSquare className="w-4 h-4 text-[#00AFC4]" />
+                      <span>1. Widget Live Chat Website</span>
+                    </span>
+                    <span className="font-mono text-[10px] bg-teal-100 text-teal-800 px-2 py-0.5 rounded font-bold">Omnichannel CS</span>
+                  </div>
+                  <p className="text-[11px] text-slate-600">
+                    Pasang widget chat mengapung di website Anda. Pengunjung dapat chat langsung dengan Bot & agen Customer Service.
                   </p>
-                )}
-
-                <div className="pt-2 border-t border-slate-200 flex items-center justify-between flex-wrap gap-2">
+                  <div className="font-mono text-[11px] text-slate-700 bg-white p-2 rounded-lg border border-teal-200 select-all overflow-x-auto">
+                    POST /inbox/webchat/send
+                  </div>
                   <button
                     type="button"
-                    onClick={() => setShowIFAModal(true)}
-                    className="px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-[#00AFC4] text-xs font-bold border border-teal-200 transition flex items-center gap-1.5 cursor-pointer"
+                    onClick={() => {
+                      setIfaCategory('livechat');
+                      setShowIFAModal(true);
+                    }}
+                    className="w-full mt-1 px-3 py-1.5 rounded-lg bg-[#00AFC4] hover:bg-[#0096a8] text-white text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <BookOpen className="w-3.5 h-3.5" />
-                    <span>📘 Buka Dokumen IFA & Panduan Developer Website</span>
+                    <span>Panduan Integrasi Live Chat</span>
                   </button>
-                  <span className="text-[11px] text-slate-400">Format standar untuk developer & webmaster</span>
+                </div>
+
+                {/* 2. Formulir Kontak / Lead Intake */}
+                <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-2">
+                  <div className="text-slate-800 font-semibold flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-slate-800">
+                      <FileText className="w-4 h-4 text-slate-600" />
+                      <span>2. Formulir Kontak (Lead Intake)</span>
+                    </span>
+                    <span className="font-mono text-[10px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded font-bold">Pre-Sales Deals</span>
+                  </div>
+                  <p className="text-[11px] text-slate-600">
+                    Kirim data pengunjung dari Contact Form / Elementor langsung menjadi Kontak & Peluang Bisnis (Deals).
+                  </p>
+                  <div className="font-mono text-[11px] text-slate-700 bg-white p-2 rounded-lg border border-slate-200 select-all overflow-x-auto">
+                    POST /integrations/lead-intake
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIfaCategory('forms');
+                      setShowIFAModal(true);
+                    }}
+                    className="w-full mt-1 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold border border-slate-300 transition flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <BookOpen className="w-3.5 h-3.5 text-slate-600" />
+                    <span>Panduan Formulir & Elementor</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -1667,7 +1702,7 @@ export default function SettingsPage() {
       {/* MODAL: IFA & Developer Guide */}
       {showIFAModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-200">
+          <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200">
             {/* Modal Header */}
             <div className="p-5 border-b border-slate-100 flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -1679,7 +1714,7 @@ export default function SettingsPage() {
                     Dokumen IFA (Interface Agreement) & Panduan Pengembang
                   </h3>
                   <p className="text-xs text-slate-500">
-                    Dokumentasi API resmi untuk pengembang website ({wsName})
+                    Dokumentasi API & SDK resmi untuk mengintegrasikan Live Chat & Formulir Website ({wsName})
                   </p>
                 </div>
               </div>
@@ -1692,79 +1727,794 @@ export default function SettingsPage() {
               </button>
             </div>
 
+            {/* Category Navigation Bar */}
+            <div className="flex items-center gap-2 px-6 pt-3 border-b border-slate-200 bg-slate-50/70">
+              <button
+                type="button"
+                onClick={() => setIfaCategory('livechat')}
+                className={`pb-3 px-3.5 text-xs font-bold border-b-2 transition flex items-center gap-2 cursor-pointer ${
+                  ifaCategory === 'livechat'
+                    ? 'border-[#00AFC4] text-[#00AFC4]'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <MessageSquare className="w-4 h-4" />
+                <span>1. Widget Live Chat (WebChat)</span>
+                <span className="text-[10px] bg-teal-100 text-teal-800 px-2 py-0.5 rounded-full font-semibold">
+                  Omnichannel CS
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIfaCategory('forms')}
+                className={`pb-3 px-3.5 text-xs font-bold border-b-2 transition flex items-center gap-2 cursor-pointer ${
+                  ifaCategory === 'forms'
+                    ? 'border-[#00AFC4] text-[#00AFC4]'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <FileText className="w-4 h-4" />
+                <span>2. Formulir Kontak Web (Lead Intake)</span>
+                <span className="text-[10px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full font-semibold">
+                  Pre-Sales Deals
+                </span>
+              </button>
+            </div>
+
             {/* Modal Body */}
             <div className="p-6 overflow-y-auto space-y-5 text-xs">
-              {/* Endpoint Summary Card */}
-              <div className="p-4 bg-slate-900 text-slate-100 rounded-xl space-y-2 font-mono">
-                <div className="flex items-center justify-between text-[11px] text-slate-400">
-                  <span>METODE HTTP: POST</span>
-                  <span className="text-emerald-400">Content-Type: application/json</span>
-                </div>
-                <div className="text-xs text-amber-300 break-all select-all font-semibold">
-                  {typeof window !== 'undefined'
-                    ? `${window.location.protocol}//${window.location.host.replace(':3000', ':8080')}/api/v1/workspaces/${currentWorkspace?.id}/integrations/lead-intake`
-                    : `https://api-crm.octocrm.id/api/v1/workspaces/${currentWorkspace?.id}/integrations/lead-intake`}
-                </div>
-              </div>
+              {/* KATEGORI 1: LIVE CHAT WIDGET */}
+              {ifaCategory === 'livechat' && (
+                <div className="space-y-4">
+                  {/* Parameter Card */}
+                  <div className="p-4 bg-slate-900 text-slate-100 rounded-xl space-y-3 font-mono">
+                    <div className="flex items-center justify-between text-[11px] text-slate-400">
+                      <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
+                        <Sparkles className="w-3.5 h-3.5" />
+                        PARAMETER KONEKSI WORKSPACE ANDA
+                      </span>
+                      <span className="text-teal-300">Public CORS API (Tanpa JWT / Bebas Pasang)</span>
+                    </div>
 
-              {/* Language Tabs */}
-              <div className="flex items-center gap-1.5 border-b border-slate-200 pb-2 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => setIfaTab('js')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
-                    ifaTab === 'js' ? 'bg-[#00AFC4] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  JavaScript (Fetch)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIfaTab('elementor')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
-                    ifaTab === 'elementor' ? 'bg-[#00AFC4] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  WordPress / Elementor
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIfaTab('php')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
-                    ifaTab === 'php' ? 'bg-[#00AFC4] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  PHP (cURL)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIfaTab('curl')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
-                    ifaTab === 'curl' ? 'bg-[#00AFC4] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  cURL
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIfaTab('schema')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
-                    ifaTab === 'schema' ? 'bg-[#00AFC4] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  Kamus Data (Schema)
-                </button>
-              </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                      <div className="bg-slate-800/80 p-2.5 rounded-lg border border-slate-700 space-y-1">
+                        <div className="text-[10px] text-slate-400 flex items-center justify-between">
+                          <span>API BASE URL:</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(apiBaseUrl);
+                              setCopiedApiUrl(true);
+                              setTimeout(() => setCopiedApiUrl(false), 2000);
+                            }}
+                            className="text-[#00AFC4] hover:underline flex items-center gap-1 text-[10px] font-sans cursor-pointer"
+                          >
+                            {copiedApiUrl ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                            <span>{copiedApiUrl ? 'Tersalin' : 'Salin URL'}</span>
+                          </button>
+                        </div>
+                        <div className="text-amber-300 font-semibold break-all select-all">{apiBaseUrl}</div>
+                      </div>
 
-              {/* Tab 1: JavaScript */}
-              {ifaTab === 'js' && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-slate-700 font-semibold">
-                    <span>Pasang di event submit form website Anda:</span>
+                      <div className="bg-slate-800/80 p-2.5 rounded-lg border border-slate-700 space-y-1">
+                        <div className="text-[10px] text-slate-400 flex items-center justify-between">
+                          <span>WORKSPACE ID:</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(currentWorkspace?.id || '');
+                              setCopiedWsId(true);
+                              setTimeout(() => setCopiedWsId(false), 2000);
+                            }}
+                            className="text-[#00AFC4] hover:underline flex items-center gap-1 text-[10px] font-sans cursor-pointer"
+                          >
+                            {copiedWsId ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                            <span>{copiedWsId ? 'Tersalin' : 'Salin ID'}</span>
+                          </button>
+                        </div>
+                        <div className="text-emerald-300 font-semibold break-all select-all">{currentWorkspace?.id}</div>
+                      </div>
+                    </div>
+
+                    <div className="text-[11px] text-slate-300 font-sans pt-1 flex items-center gap-2 flex-wrap">
+                      <span className="bg-emerald-950 text-emerald-300 border border-emerald-800 px-2 py-0.5 rounded text-[10px]">
+                        ✓ Auto Kontak Pelanggan
+                      </span>
+                      <span className="bg-teal-950 text-teal-300 border border-teal-800 px-2 py-0.5 rounded text-[10px]">
+                        ✓ Live Chat Omnichannel
+                      </span>
+                      <span className="bg-cyan-950 text-cyan-300 border border-cyan-800 px-2 py-0.5 rounded text-[10px]">
+                        ✓ Auto Tiket CS & Round-Robin
+                      </span>
+                      <span className="bg-blue-950 text-blue-300 border border-blue-800 px-2 py-0.5 rounded text-[10px]">
+                        ✓ Asisten Virtual Bot 24/7
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Sub Tabs */}
+                  <div className="flex items-center gap-1.5 border-b border-slate-200 pb-2 flex-wrap">
                     <button
                       type="button"
-                      onClick={() => {
-                        const code = `fetch("${typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.host.replace(':3000', ':8080')}/api/v1/workspaces/${currentWorkspace?.id}/integrations/lead-intake` : `https://api-crm.octocrm.id/api/v1/workspaces/${currentWorkspace?.id}/integrations/lead-intake`}", {
+                      onClick={() => setIfaChatTab('react')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                        ifaChatTab === 'react' ? 'bg-[#00AFC4] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      React / Next.js Component
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIfaChatTab('vanilla')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                        ifaChatTab === 'vanilla' ? 'bg-[#00AFC4] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      Vanilla JS / HTML Embed (Drop-in)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIfaChatTab('api')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                        ifaChatTab === 'api' ? 'bg-[#00AFC4] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      Spesifikasi REST API
+                    </button>
+                  </div>
+
+                  {/* Sub-tab 1: React / Next.js Component */}
+                  {ifaChatTab === 'react' && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-slate-700 font-semibold">
+                        <span>Simpan sebagai komponen <code>LiveChatWidget.jsx</code> / <code>.tsx</code> di proyek Anda:</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const code = `'use client';
+
+import React, { useState, useEffect, useRef } from 'react';
+
+// =========================================================================
+// OCTO-CRM Live Chat Widget untuk React / Next.js
+// Workspace: ${wsName} (${currentWorkspace?.id})
+// =========================================================================
+
+export default function LiveChatWidget() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [visitorId, setVisitorId] = useState('');
+  const [hasSession, setHasSession] = useState(false);
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [initialMessage, setInitialMessage] = useState('');
+  const [newMessage, setNewMessage] = useState('');
+  const [messages, setMessages] = useState([]);
+  const [assignedToName, setAssignedToName] = useState(null);
+  const [ticketNumber, setTicketNumber] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const messagesEndRef = useRef(null);
+
+  // Konfigurasi Endpoint OCTO-CRM
+  const CRM_API_URL = "${apiBaseUrl}";
+  const WORKSPACE_ID = "${currentWorkspace?.id}";
+
+  // 1. Inisialisasi ID unik pengunjung (LocalStorage)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    let vid = localStorage.getItem('octo_webchat_vid');
+    if (!vid) {
+      vid = 'web-' + Math.random().toString(36).substring(2, 10) + '-' + Date.now();
+      localStorage.setItem('octo_webchat_vid', vid);
+    }
+    setVisitorId(vid);
+
+    setName(localStorage.getItem('octo_webchat_name') || '');
+    setPhone(localStorage.getItem('octo_webchat_phone') || '');
+    setEmail(localStorage.getItem('octo_webchat_email') || '');
+    setHasSession(localStorage.getItem('octo_webchat_active') === 'true');
+  }, []);
+
+  // 2. Polling pesan otomatis dari CRM (setiap 3.5 detik)
+  useEffect(() => {
+    if (!isOpen || !visitorId || !hasSession) return;
+
+    const fetchMessages = async () => {
+      try {
+        const res = await fetch(\`\${CRM_API_URL}/workspaces/\${WORKSPACE_ID}/inbox/webchat/messages?visitor_id=\${encodeURIComponent(visitorId)}\`);
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && json.data) {
+            setMessages(json.data.messages || []);
+            if (json.data.assigned_to_name) setAssignedToName(json.data.assigned_to_name);
+            if (json.data.ticket_number) setTicketNumber(json.data.ticket_number);
+          }
+        }
+      } catch (e) {}
+    };
+
+    fetchMessages();
+    const timer = setInterval(fetchMessages, 3500);
+    return () => clearInterval(timer);
+  }, [isOpen, visitorId, hasSession]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isOpen]);
+
+  // 3. Kirim pesan pembuka
+  const handleStartChat = async (e) => {
+    e.preventDefault();
+    if (!name.trim() || !initialMessage.trim()) return;
+
+    setLoading(true);
+    try {
+      const res = await fetch(\`\${CRM_API_URL}/workspaces/\${WORKSPACE_ID}/inbox/webchat/send\`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          visitor_id: visitorId,
+          name: name.trim(),
+          phone: phone.trim(),
+          email: email.trim(),
+          message: initialMessage.trim(),
+        }),
+      });
+
+      if (res.ok) {
+        localStorage.setItem('octo_webchat_name', name.trim());
+        localStorage.setItem('octo_webchat_phone', phone.trim());
+        localStorage.setItem('octo_webchat_email', email.trim());
+        localStorage.setItem('octo_webchat_active', 'true');
+        setHasSession(true);
+        setMessages([{
+          id: 'init-' + Date.now(),
+          sender_type: 'customer',
+          sender_name: name.trim(),
+          content: initialMessage.trim(),
+          created_at: new Date().toISOString(),
+        }]);
+        setInitialMessage('');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 4. Kirim balasan percakapan aktif
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+    if (!newMessage.trim() || loading) return;
+
+    const content = newMessage.trim();
+    setNewMessage('');
+    setMessages((prev) => [...prev, {
+      id: 'local-' + Date.now(),
+      sender_type: 'customer',
+      sender_name: name || 'Anda',
+      content: content,
+      created_at: new Date().toISOString(),
+    }]);
+
+    try {
+      await fetch(\`\${CRM_API_URL}/workspaces/\${WORKSPACE_ID}/inbox/webchat/send\`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          visitor_id: visitorId,
+          name: name || 'Pengunjung Web',
+          phone,
+          email,
+          message: content,
+        }),
+      });
+    } catch (e) {
+      console.warn('Gagal kirim pesan:', e);
+    }
+  };
+
+  return (
+    <div style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 9999, fontFamily: 'sans-serif' }}>
+      {!isOpen && (
+        <button
+          onClick={() => setIsOpen(true)}
+          style={{
+            backgroundColor: '#00AFC4',
+            color: '#fff',
+            border: 'none',
+            borderRadius: 50,
+            padding: '12px 20px',
+            fontWeight: 'bold',
+            boxShadow: '0 4px 14px rgba(0,0,0,0.2)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
+          💬 Tanya Tim CS
+        </button>
+      )}
+
+      {isOpen && (
+        <div
+          style={{
+            width: 360,
+            height: 520,
+            backgroundColor: '#fff',
+            borderRadius: 16,
+            boxShadow: '0 10px 30px rgba(0,0,0,0.18)',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            border: '1px solid #e2e8f0',
+          }}
+        >
+          {/* Header */}
+          <div style={{ backgroundColor: '#142740', color: '#fff', padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontWeight: 'bold', fontSize: 14 }}>Layanan Pelanggan CS</div>
+              <div style={{ fontSize: 11, color: '#00AFC4' }}>
+                {assignedToName ? \`Ditangani oleh: \${assignedToName}\` : 'Tim CS Siap Membantu 24/7'}
+              </div>
+            </div>
+            <button
+              onClick={() => setIsOpen(false)}
+              style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: 18, cursor: 'pointer' }}
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Body */}
+          <div style={{ flex: 1, padding: 14, overflowY: 'auto', backgroundColor: '#f8fafc' }}>
+            {!hasSession ? (
+              <form onSubmit={handleStartChat} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <p style={{ fontSize: 12, color: '#475569', margin: 0 }}>
+                  Silakan isi identitas Anda untuk terhubung langsung dengan Customer Support kami:
+                </p>
+                <input
+                  required
+                  placeholder="Nama Lengkap *"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  style={{ padding: 8, borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 12 }}
+                />
+                <input
+                  placeholder="No WhatsApp / Telepon"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  style={{ padding: 8, borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 12 }}
+                />
+                <input
+                  placeholder="Email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  style={{ padding: 8, borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 12 }}
+                />
+                <textarea
+                  required
+                  rows={3}
+                  placeholder="Ada yang bisa kami bantu? *"
+                  value={initialMessage}
+                  onChange={(e) => setInitialMessage(e.target.value)}
+                  style={{ padding: 8, borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 12, resize: 'none' }}
+                />
+                <button
+                  type="submit"
+                  disabled={loading}
+                  style={{ backgroundColor: '#00AFC4', color: '#fff', border: 'none', borderRadius: 8, padding: 10, fontWeight: 'bold', cursor: 'pointer' }}
+                >
+                  {loading ? 'Menghubungkan...' : 'Mulai Obrolan'}
+                </button>
+              </form>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {ticketNumber && (
+                  <div style={{ textAlign: 'center', fontSize: 10, color: '#64748b', backgroundColor: '#e2e8f0', padding: 4, borderRadius: 6 }}>
+                    Tiket Bantuan: #{ticketNumber}
+                  </div>
+                )}
+                {messages.map((m, idx) => {
+                  const isUser = m.sender_type === 'customer';
+                  return (
+                    <div
+                      key={m.id || idx}
+                      style={{
+                        alignSelf: isUser ? 'flex-end' : 'flex-start',
+                        backgroundColor: isUser ? '#00AFC4' : '#ffffff',
+                        color: isUser ? '#ffffff' : '#1e293b',
+                        padding: '8px 12px',
+                        borderRadius: 12,
+                        maxWidth: '80%',
+                        fontSize: 12,
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                        whiteSpace: 'pre-wrap',
+                      }}
+                    >
+                      {!isUser && <div style={{ fontSize: 10, fontWeight: 'bold', color: '#00AFC4', marginBottom: 2 }}>{m.sender_name || 'CS'}</div>}
+                      {m.content}
+                    </div>
+                  );
+                })}
+                <div ref={messagesEndRef} />
+              </div>
+            )}
+          </div>
+
+          {/* Footer Input */}
+          {hasSession && (
+            <form onSubmit={handleSendMessage} style={{ padding: 10, borderTop: '1px solid #e2e8f0', display: 'flex', gap: 8, backgroundColor: '#fff' }}>
+              <input
+                type="text"
+                placeholder="Tulis balasan..."
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                style={{ flex: 1, padding: '8px 12px', borderRadius: 20, border: '1px solid #cbd5e1', fontSize: 12, outline: 'none' }}
+              />
+              <button
+                type="submit"
+                style={{ backgroundColor: '#00AFC4', color: '#fff', border: 'none', borderRadius: '50%', width: 34, height: 34, cursor: 'pointer' }}
+              >
+                ➤
+              </button>
+            </form>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}`;
+                            navigator.clipboard.writeText(code);
+                            setCopiedIFAText(true);
+                            setTimeout(() => setCopiedIFAText(false), 2000);
+                          }}
+                          className="text-xs font-semibold text-[#00AFC4] hover:underline flex items-center gap-1 cursor-pointer"
+                        >
+                          {copiedIFAText ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                          <span>{copiedIFAText ? 'Tersalin!' : 'Salin Kode Komponen React'}</span>
+                        </button>
+                      </div>
+
+                      <pre className="p-3.5 bg-slate-900 text-slate-100 rounded-xl overflow-x-auto font-mono text-[11px] leading-relaxed max-h-[380px]">
+{`// 1. Install & pasang di layout atau halaman React / Next.js Anda:
+import LiveChatWidget from '@/components/LiveChatWidget';
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="id">
+      <body>
+        {children}
+        {/* Floating Chat Widget terhubung ke OCTO-CRM */}
+        <LiveChatWidget />
+      </body>
+    </html>
+  );
+}
+
+// 2. Konfigurasi Endpoint:
+// API_URL: "${apiBaseUrl}"
+// WORKSPACE_ID: "${currentWorkspace?.id}"
+// Endpoint kirim: POST \${API_URL}/workspaces/\${WORKSPACE_ID}/inbox/webchat/send
+// Endpoint polling: GET \${API_URL}/workspaces/\${WORKSPACE_ID}/inbox/webchat/messages?visitor_id=\${visitorId}`}
+                      </pre>
+                    </div>
+                  )}
+
+                  {/* Sub-tab 2: Vanilla JS / HTML Embed */}
+                  {ifaChatTab === 'vanilla' && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-slate-700 font-semibold">
+                        <span>Letakkan sebelum tag penutup <code>&lt;/body&gt;</code> di website HTML / WordPress / Webflow:</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const code = `<!-- OCTO-CRM Live Chat Widget (Drop-in Script) -->
+<script>
+(function() {
+  const CONFIG = {
+    workspaceId: "${currentWorkspace?.id}",
+    apiUrl: "${apiBaseUrl}",
+    primaryColor: "#00AFC4",
+    title: "${wsName || 'Customer Support'}"
+  };
+
+  let vid = localStorage.getItem('octo_webchat_vid');
+  if (!vid) {
+    vid = 'web-' + Math.random().toString(36).substring(2, 9) + '-' + Date.now();
+    localStorage.setItem('octo_webchat_vid', vid);
+  }
+
+  const style = document.createElement('style');
+  style.innerHTML = \`
+    #octo-chat-btn { position: fixed; bottom: 20px; right: 20px; z-index: 999999; background: \${CONFIG.primaryColor}; color: white; border: none; border-radius: 50px; padding: 12px 22px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.2); font-family: sans-serif; display: flex; align-items: center; gap: 8px; }
+    #octo-chat-window { position: fixed; bottom: 80px; right: 20px; z-index: 999999; width: 350px; height: 500px; background: #fff; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); display: none; flex-direction: column; overflow: hidden; font-family: sans-serif; border: 1px solid #e2e8f0; }
+    #octo-chat-window.open { display: flex; }
+    #octo-chat-header { background: #142740; color: #fff; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: bold; }
+    #octo-chat-messages { flex: 1; padding: 12px; overflow-y: auto; background: #f8fafc; font-size: 12px; display: flex; flex-direction: column; gap: 8px; }
+    .octo-msg { padding: 8px 12px; border-radius: 12px; max-width: 80%; word-break: break-word; }
+    .octo-msg-user { background: \${CONFIG.primaryColor}; color: #fff; align-self: flex-end; }
+    .octo-msg-agent { background: #fff; color: #1e293b; align-self: flex-start; border: 1px solid #e2e8f0; }
+    #octo-chat-footer { padding: 8px; border-top: 1px solid #e2e8f0; display: flex; gap: 6px; background: #fff; }
+    #octo-chat-footer input { flex: 1; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 20px; font-size: 12px; outline: none; }
+    #octo-chat-footer button { background: \${CONFIG.primaryColor}; color: #fff; border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; }
+  \`;
+  document.head.appendChild(style);
+
+  const root = document.createElement('div');
+  root.innerHTML = \`
+    <button id="octo-chat-btn">💬 Tanya CS</button>
+    <div id="octo-chat-window">
+      <div id="octo-chat-header">
+        <span>\${CONFIG.title} - Live Support</span>
+        <span id="octo-chat-close" style="cursor:pointer;font-size:16px;">✕</span>
+      </div>
+      <div id="octo-chat-messages">
+        <div style="font-size:11px;color:#64748b;text-align:center;padding:10px;">
+          Ketik pesan Anda di bawah untuk terhubung langsung dengan Customer Support kami.
+        </div>
+      </div>
+      <form id="octo-chat-footer">
+        <input id="octo-chat-input" placeholder="Ketik pesan..." required />
+        <button type="submit">➤</button>
+      </form>
+    </div>
+  \`;
+  document.body.appendChild(root);
+
+  const btn = document.getElementById('octo-chat-btn');
+  const win = document.getElementById('octo-chat-window');
+  const close = document.getElementById('octo-chat-close');
+  const msgBox = document.getElementById('octo-chat-messages');
+  const form = document.getElementById('octo-chat-footer');
+  const input = document.getElementById('octo-chat-input');
+
+  btn.onclick = () => { win.classList.add('open'); btn.style.display = 'none'; pollMessages(); };
+  close.onclick = () => { win.classList.remove('open'); btn.style.display = 'flex'; };
+
+  let isPolling = false;
+  function pollMessages() {
+    if (isPolling) return;
+    isPolling = true;
+    setInterval(async () => {
+      if (!win.classList.contains('open')) return;
+      try {
+        const res = await fetch(\`\${CONFIG.apiUrl}/workspaces/\${CONFIG.workspaceId}/inbox/webchat/messages?visitor_id=\${encodeURIComponent(vid)}\`);
+        if (res.ok) {
+          const json = await res.json();
+          if (json.data && json.data.messages) {
+            msgBox.innerHTML = '';
+            json.data.messages.forEach(m => {
+              const el = document.createElement('div');
+              el.className = 'octo-msg ' + (m.sender_type === 'customer' ? 'octo-msg-user' : 'octo-msg-agent');
+              el.innerText = m.content;
+              msgBox.appendChild(el);
+            });
+            msgBox.scrollTop = msgBox.scrollHeight;
+          }
+        }
+      } catch(e) {}
+    }, 3500);
+  }
+
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    const txt = input.value.trim();
+    if (!txt) return;
+    input.value = '';
+
+    const el = document.createElement('div');
+    el.className = 'octo-msg octo-msg-user';
+    el.innerText = txt;
+    msgBox.appendChild(el);
+    msgBox.scrollTop = msgBox.scrollHeight;
+
+    try {
+      await fetch(\`\${CONFIG.apiUrl}/workspaces/\${CONFIG.workspaceId}/inbox/webchat/send\`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ visitor_id: vid, name: 'Pengunjung Web', message: txt })
+      });
+    } catch(err) {}
+  };
+})();
+</script>`;
+                            navigator.clipboard.writeText(code);
+                            setCopiedIFAText(true);
+                            setTimeout(() => setCopiedIFAText(false), 2000);
+                          }}
+                          className="text-xs font-semibold text-[#00AFC4] hover:underline flex items-center gap-1 cursor-pointer"
+                        >
+                          {copiedIFAText ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                          <span>{copiedIFAText ? 'Tersalin!' : 'Salin Script HTML'}</span>
+                        </button>
+                      </div>
+
+                      <pre className="p-3.5 bg-slate-900 text-slate-100 rounded-xl overflow-x-auto font-mono text-[11px] leading-relaxed max-h-[360px]">
+{`<!-- Pasang di file HTML / header-footer script website: -->
+<script>
+  // Otomatis terhubung ke OCTO-CRM Workspace: ${wsName}
+  // Endpoint: ${apiBaseUrl}/workspaces/${currentWorkspace?.id}/inbox/webchat/send
+  // Cukup salin script lengkap di atas tombol 'Salin Script HTML'
+</script>`}
+                      </pre>
+                    </div>
+                  )}
+
+                  {/* Sub-tab 3: Spesifikasi REST API */}
+                  {ifaChatTab === 'api' && (
+                    <div className="space-y-4">
+                      {/* Endpoint 1 */}
+                      <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-slate-800 text-sm flex items-center gap-2">
+                            <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-mono text-[10px] font-bold">POST</span>
+                            <span>1. Inisiasi / Mengirim Pesan Obrolan</span>
+                          </span>
+                          <span className="text-[11px] text-slate-500 font-mono">Public CORS Endpoint</span>
+                        </div>
+                        <div className="p-2 bg-white border border-slate-200 rounded font-mono text-[11px] text-slate-800 break-all select-all">
+                          {apiBaseUrl}/workspaces/{currentWorkspace?.id}/inbox/webchat/send
+                        </div>
+                        <div className="text-[11px] text-slate-600">
+                          <strong>Format Request (JSON):</strong>
+                        </div>
+                        <pre className="p-3 bg-slate-900 text-slate-100 rounded-lg overflow-x-auto font-mono text-[11px]">
+{`{
+  "visitor_id": "web-9a8b7c-171829000",   // Wajib: ID browser pengunjung (localStorage)
+  "name": "Budi Santoso",                 // Wajib: Nama lengkap pengunjung
+  "phone": "+6281295099738",              // Opsional: Nomor WhatsApp/HP
+  "email": "budi@perusahaan.com",         // Opsional: Email pengunjung
+  "message": "Halo, saya butuh bantuan informasi paket layanan." // Wajib
+}`}
+                        </pre>
+                        <div className="text-[11px] text-slate-600">
+                          <strong>Response Sukses (Status: 201 Created):</strong>
+                        </div>
+                        <pre className="p-3 bg-slate-900 text-slate-100 rounded-lg overflow-x-auto font-mono text-[11px]">
+{`{
+  "success": true,
+  "message": "Pesan webchat berhasil dikirim",
+  "data": {
+    "conversation_id": "84da408e-7df8-428b-a82a-6f8550795ede",
+    "message_id": "msg-0192e2b3...",
+    "sender_name": "Budi Santoso",
+    "content": "Halo, saya butuh bantuan...",
+    "created_at": "2026-10-26T15:45:00Z"
+  }
+}`}
+                        </pre>
+                      </div>
+
+                      {/* Endpoint 2 */}
+                      <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-slate-800 text-sm flex items-center gap-2">
+                            <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-mono text-[10px] font-bold">GET</span>
+                            <span>2. Polling Riwayat Obrolan & Balasan Agen CS</span>
+                          </span>
+                          <span className="text-[11px] text-slate-500 font-mono">Interval: 3.5s</span>
+                        </div>
+                        <div className="p-2 bg-white border border-slate-200 rounded font-mono text-[11px] text-slate-800 break-all select-all">
+                          {apiBaseUrl}/workspaces/{currentWorkspace?.id}/inbox/webchat/messages?visitor_id=web-9a8b7c-171829000
+                        </div>
+                        <div className="text-[11px] text-slate-600">
+                          <strong>Response Sukses (Status: 200 OK):</strong>
+                        </div>
+                        <pre className="p-3 bg-slate-900 text-slate-100 rounded-lg overflow-x-auto font-mono text-[11px]">
+{`{
+  "success": true,
+  "data": {
+    "conversation_id": "84da408e-7df8-428b-a82a-6f8550795ede",
+    "ticket_number": "TICK-20261026-0001",
+    "assigned_to_name": "Egi Chandra Pratama",
+    "status": "active",
+    "messages": [
+      {
+        "id": "msg-001",
+        "sender_type": "customer",
+        "sender_name": "Budi Santoso",
+        "content": "Halo, saya butuh bantuan...",
+        "created_at": "2026-10-26T15:45:00Z"
+      },
+      {
+        "id": "msg-002",
+        "sender_type": "agent",
+        "sender_name": "Asisten Virtual OCTO",
+        "content": "Halo Budi Santoso! 👋 Selamat datang...",
+        "created_at": "2026-10-26T15:45:02Z"
+      },
+      {
+        "id": "msg-003",
+        "sender_type": "agent",
+        "sender_name": "Egi Chandra Pratama",
+        "content": "Halo Pak Budi, saya dari tim support...",
+        "created_at": "2026-10-26T15:46:12Z"
+      }
+    ]
+  }
+}`}
+                        </pre>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* KATEGORI 2: FORMULIR KONTAK WEB (LEAD INTAKE) */}
+              {ifaCategory === 'forms' && (
+                <div className="space-y-4">
+                  {/* Endpoint Summary Card */}
+                  <div className="p-4 bg-slate-900 text-slate-100 rounded-xl space-y-2 font-mono">
+                    <div className="flex items-center justify-between text-[11px] text-slate-400">
+                      <span>METODE HTTP: POST</span>
+                      <span className="text-emerald-400">Content-Type: application/json</span>
+                    </div>
+                    <div className="text-xs text-amber-300 break-all select-all font-semibold">
+                      {apiBaseUrl}/workspaces/{currentWorkspace?.id}/integrations/lead-intake
+                    </div>
+                  </div>
+
+                  {/* Language Tabs */}
+                  <div className="flex items-center gap-1.5 border-b border-slate-200 pb-2 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => setIfaTab('js')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                        ifaTab === 'js' ? 'bg-[#00AFC4] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      JavaScript (Fetch)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIfaTab('elementor')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                        ifaTab === 'elementor' ? 'bg-[#00AFC4] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      WordPress / Elementor
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIfaTab('php')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                        ifaTab === 'php' ? 'bg-[#00AFC4] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      PHP (cURL)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIfaTab('curl')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                        ifaTab === 'curl' ? 'bg-[#00AFC4] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      cURL
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIfaTab('schema')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                        ifaTab === 'schema' ? 'bg-[#00AFC4] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      Kamus Data (Schema)
+                    </button>
+                  </div>
+
+                  {/* Tab 1: JavaScript */}
+                  {ifaTab === 'js' && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-slate-700 font-semibold">
+                        <span>Pasang di event submit form website Anda:</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const code = `fetch("${apiBaseUrl}/workspaces/${currentWorkspace?.id}/integrations/lead-intake", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
@@ -1781,17 +2531,17 @@ export default function SettingsPage() {
     alert("Terima kasih! Pesan Anda telah terkirim.");
   }
 });`;
-                        navigator.clipboard.writeText(code);
-                        setCopiedIFAText(true);
-                        setTimeout(() => setCopiedIFAText(false), 2000);
-                      }}
-                      className="text-xs font-semibold text-[#00AFC4] hover:underline flex items-center gap-1 cursor-pointer"
-                    >
-                      {copiedIFAText ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                      <span>{copiedIFAText ? 'Tersalin!' : 'Salin Kode JS'}</span>
-                    </button>
-                  </div>
-                  <pre className="p-3 bg-slate-900 text-slate-100 rounded-xl overflow-x-auto font-mono text-[11px] leading-relaxed">
+                            navigator.clipboard.writeText(code);
+                            setCopiedIFAText(true);
+                            setTimeout(() => setCopiedIFAText(false), 2000);
+                          }}
+                          className="text-xs font-semibold text-[#00AFC4] hover:underline flex items-center gap-1 cursor-pointer"
+                        >
+                          {copiedIFAText ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                          <span>{copiedIFAText ? 'Tersalin!' : 'Salin Kode JS'}</span>
+                        </button>
+                      </div>
+                      <pre className="p-3 bg-slate-900 text-slate-100 rounded-xl overflow-x-auto font-mono text-[11px] leading-relaxed">
 {`// 1. Ambil nilai input dari form website
 const payload = {
   full_name: document.getElementById("name").value,       // Wajib
@@ -1804,7 +2554,7 @@ const payload = {
 };
 
 // 2. Kirim ke OCTO-CRM Webhook Endpoint
-fetch("${typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.host.replace(':3000', ':8080')}/api/v1/workspaces/${currentWorkspace?.id}/integrations/lead-intake` : `https://api-crm.octocrm.id/api/v1/workspaces/${currentWorkspace?.id}/integrations/lead-intake`}", {
+fetch("${apiBaseUrl}/workspaces/${currentWorkspace?.id}/integrations/lead-intake", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify(payload)
@@ -1816,46 +2566,44 @@ fetch("${typeof window !== 'undefined' ? `${window.location.protocol}//${window.
     alert("Terima kasih, tim kami akan segera menghubungi Anda!");
   }
 });`}
-                  </pre>
-                </div>
-              )}
+                      </pre>
+                    </div>
+                  )}
 
-              {/* Tab 2: Elementor */}
-              {ifaTab === 'elementor' && (
-                <div className="space-y-3 p-4 bg-slate-50 border border-slate-200 rounded-xl">
-                  <h4 className="font-bold text-sm text-slate-800">Panduan No-Code (WordPress Elementor Pro):</h4>
-                  <ol className="list-decimal list-inside space-y-2 text-slate-600 text-[11px] leading-relaxed">
-                    <li>Buka halaman website Anda di <strong>Elementor Editor</strong>.</li>
-                    <li>Klik elemen <strong>Formulir Kontak (Form Widget)</strong>.</li>
-                    <li>Di panel pengaturan kiri, buka menu <strong>Actions After Submit</strong>, lalu tambahkan <strong>Webhook</strong>.</li>
-                    <li>Akan muncul sub-menu baru <strong>Webhook</strong> di bawahnya. Masukkan URL berikut:
-                      <div className="p-2 bg-white border border-slate-300 rounded font-mono text-[11px] text-slate-800 select-all my-1.5 break-all">
-                        {typeof window !== 'undefined'
-                          ? `${window.location.protocol}//${window.location.host.replace(':3000', ':8080')}/api/v1/workspaces/${currentWorkspace?.id}/integrations/lead-intake`
-                          : `https://api-crm.octocrm.id/api/v1/workspaces/${currentWorkspace?.id}/integrations/lead-intake`}
-                      </div>
-                    </li>
-                    <li>Pastikan ID pada masing-masing field form diatur sebagai:
-                      <ul className="list-disc list-inside ml-4 mt-1 space-y-0.5 font-mono text-slate-700">
-                        <li><code>full_name</code> (untuk Nama Lengkap)</li>
-                        <li><code>phone</code> (untuk No HP / WhatsApp)</li>
-                        <li><code>email</code> (untuk Email)</li>
-                        <li><code>company_name</code> (untuk Perusahaan)</li>
-                        <li><code>message</code> (untuk Pesan / Kebutuhan)</li>
-                      </ul>
-                    </li>
-                    <li>Klik <strong>Update / Publish</strong>. Formulir sekarang sudah terhubung 100% ke OCTO-CRM!</li>
-                  </ol>
-                </div>
-              )}
+                  {/* Tab 2: Elementor */}
+                  {ifaTab === 'elementor' && (
+                    <div className="space-y-3 p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                      <h4 className="font-bold text-sm text-slate-800">Panduan No-Code (WordPress Elementor Pro):</h4>
+                      <ol className="list-decimal list-inside space-y-2 text-slate-600 text-[11px] leading-relaxed">
+                        <li>Buka halaman website Anda di <strong>Elementor Editor</strong>.</li>
+                        <li>Klik elemen <strong>Formulir Kontak (Form Widget)</strong>.</li>
+                        <li>Di panel pengaturan kiri, buka menu <strong>Actions After Submit</strong>, lalu tambahkan <strong>Webhook</strong>.</li>
+                        <li>Akan muncul sub-menu baru <strong>Webhook</strong> di bawahnya. Masukkan URL berikut:
+                          <div className="p-2 bg-white border border-slate-300 rounded font-mono text-[11px] text-slate-800 select-all my-1.5 break-all">
+                            {apiBaseUrl}/workspaces/{currentWorkspace?.id}/integrations/lead-intake
+                          </div>
+                        </li>
+                        <li>Pastikan ID pada masing-masing field form diatur sebagai:
+                          <ul className="list-disc list-inside ml-4 mt-1 space-y-0.5 font-mono text-slate-700">
+                            <li><code>full_name</code> (untuk Nama Lengkap)</li>
+                            <li><code>phone</code> (untuk No HP / WhatsApp)</li>
+                            <li><code>email</code> (untuk Email)</li>
+                            <li><code>company_name</code> (untuk Perusahaan)</li>
+                            <li><code>message</code> (untuk Pesan / Kebutuhan)</li>
+                          </ul>
+                        </li>
+                        <li>Klik <strong>Update / Publish</strong>. Formulir sekarang sudah terhubung 100% ke OCTO-CRM!</li>
+                      </ol>
+                    </div>
+                  )}
 
-              {/* Tab 3: PHP */}
-              {ifaTab === 'php' && (
-                <div className="space-y-2">
-                  <div className="text-slate-700 font-semibold">Implementasi PHP cURL (Backend / Custom WordPress):</div>
-                  <pre className="p-3 bg-slate-900 text-slate-100 rounded-xl overflow-x-auto font-mono text-[11px] leading-relaxed">
+                  {/* Tab 3: PHP */}
+                  {ifaTab === 'php' && (
+                    <div className="space-y-2">
+                      <div className="text-slate-700 font-semibold">Implementasi PHP cURL (Backend / Custom WordPress):</div>
+                      <pre className="p-3 bg-slate-900 text-slate-100 rounded-xl overflow-x-auto font-mono text-[11px] leading-relaxed">
 {`<?php
-$url = "${typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.host.replace(':3000', ':8080')}/api/v1/workspaces/${currentWorkspace?.id}/integrations/lead-intake` : `https://api-crm.octocrm.id/api/v1/workspaces/${currentWorkspace?.id}/integrations/lead-intake`}";
+$url = "${apiBaseUrl}/workspaces/${currentWorkspace?.id}/integrations/lead-intake";
 
 $data = [
     'full_name'    => $_POST['name'],
@@ -1884,16 +2632,16 @@ if ($http_code === 201) {
     echo "Pesan berhasil masuk ke CRM!";
 }
 ?>`}
-                  </pre>
-                </div>
-              )}
+                      </pre>
+                    </div>
+                  )}
 
-              {/* Tab 4: cURL */}
-              {ifaTab === 'curl' && (
-                <div className="space-y-2">
-                  <div className="text-slate-700 font-semibold">Uji coba langsung via Terminal atau Postman:</div>
-                  <pre className="p-3 bg-slate-900 text-slate-100 rounded-xl overflow-x-auto font-mono text-[11px] leading-relaxed">
-{`curl -X POST "${typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.host.replace(':3000', ':8080')}/api/v1/workspaces/${currentWorkspace?.id}/integrations/lead-intake` : `https://api-crm.octocrm.id/api/v1/workspaces/${currentWorkspace?.id}/integrations/lead-intake`}" \\
+                  {/* Tab 4: cURL */}
+                  {ifaTab === 'curl' && (
+                    <div className="space-y-2">
+                      <div className="text-slate-700 font-semibold">Uji coba langsung via Terminal atau Postman:</div>
+                      <pre className="p-3 bg-slate-900 text-slate-100 rounded-xl overflow-x-auto font-mono text-[11px] leading-relaxed">
+{`curl -X POST "${apiBaseUrl}/workspaces/${currentWorkspace?.id}/integrations/lead-intake" \\
      -H "Content-Type: application/json" \\
      -d '{
        "full_name": "Budi Santoso",
@@ -1903,70 +2651,72 @@ if ($http_code === 201) {
        "message": "Halo, saya butuh penawaran paket interior kantor.",
        "form_type": "cURL Testing"
      }'`}
-                  </pre>
-                </div>
-              )}
+                      </pre>
+                    </div>
+                  )}
 
-              {/* Tab 5: Schema */}
-              {ifaTab === 'schema' && (
-                <div className="space-y-3">
-                  <div className="text-slate-700 font-semibold">Kamus Parameter JSON (Data Schema):</div>
-                  <div className="border border-slate-200 rounded-xl overflow-hidden">
-                    <table className="w-full text-[11px] text-left">
-                      <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
-                        <tr>
-                          <th className="px-3 py-2">Parameter</th>
-                          <th className="px-3 py-2">Tipe</th>
-                          <th className="px-3 py-2">Wajib?</th>
-                          <th className="px-3 py-2">Keterangan</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 text-slate-600">
-                        <tr>
-                          <td className="px-3 py-2 font-mono text-teal-700 font-bold">full_name</td>
-                          <td className="px-3 py-2">String</td>
-                          <td className="px-3 py-2 text-rose-600 font-bold">YA</td>
-                          <td className="px-3 py-2">Nama lengkap calon klien</td>
-                        </tr>
-                        <tr>
-                          <td className="px-3 py-2 font-mono text-teal-700 font-bold">phone</td>
-                          <td className="px-3 py-2">String</td>
-                          <td className="px-3 py-2 text-rose-600 font-bold">YA</td>
-                          <td className="px-3 py-2">No telepon atau WhatsApp aktif</td>
-                        </tr>
-                        <tr>
-                          <td className="px-3 py-2 font-mono">email</td>
-                          <td className="px-3 py-2">String</td>
-                          <td className="px-3 py-2 text-slate-400">Opsional</td>
-                          <td className="px-3 py-2">Alamat email calon klien</td>
-                        </tr>
-                        <tr>
-                          <td className="px-3 py-2 font-mono">company_name</td>
-                          <td className="px-3 py-2">String</td>
-                          <td className="px-3 py-2 text-slate-400">Opsional</td>
-                          <td className="px-3 py-2">Nama perusahaan / organisasi</td>
-                        </tr>
-                        <tr>
-                          <td className="px-3 py-2 font-mono">product_interest</td>
-                          <td className="px-3 py-2">String</td>
-                          <td className="px-3 py-2 text-slate-400">Opsional</td>
-                          <td className="px-3 py-2">Layanan yang diminati</td>
-                        </tr>
-                        <tr>
-                          <td className="px-3 py-2 font-mono">message</td>
-                          <td className="px-3 py-2">String</td>
-                          <td className="px-3 py-2 text-slate-400">Opsional</td>
-                          <td className="px-3 py-2">Catatan atau rincian kebutuhan</td>
-                        </tr>
-                        <tr>
-                          <td className="px-3 py-2 font-mono">utm_source</td>
-                          <td className="px-3 py-2">String</td>
-                          <td className="px-3 py-2 text-slate-400">Opsional</td>
-                          <td className="px-3 py-2">Sumber iklan (Google Ads, IG, dll)</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
+                  {/* Tab 5: Schema */}
+                  {ifaTab === 'schema' && (
+                    <div className="space-y-3">
+                      <div className="text-slate-700 font-semibold">Kamus Parameter JSON (Data Schema):</div>
+                      <div className="border border-slate-200 rounded-xl overflow-hidden">
+                        <table className="w-full text-[11px] text-left">
+                          <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
+                            <tr>
+                              <th className="px-3 py-2">Parameter</th>
+                              <th className="px-3 py-2">Tipe</th>
+                              <th className="px-3 py-2">Wajib?</th>
+                              <th className="px-3 py-2">Keterangan</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 text-slate-600">
+                            <tr>
+                              <td className="px-3 py-2 font-mono text-teal-700 font-bold">full_name</td>
+                              <td className="px-3 py-2">String</td>
+                              <td className="px-3 py-2 text-rose-600 font-bold">YA</td>
+                              <td className="px-3 py-2">Nama lengkap calon klien</td>
+                            </tr>
+                            <tr>
+                              <td className="px-3 py-2 font-mono text-teal-700 font-bold">phone</td>
+                              <td className="px-3 py-2">String</td>
+                              <td className="px-3 py-2 text-rose-600 font-bold">YA</td>
+                              <td className="px-3 py-2">No telepon atau WhatsApp aktif</td>
+                            </tr>
+                            <tr>
+                              <td className="px-3 py-2 font-mono">email</td>
+                              <td className="px-3 py-2">String</td>
+                              <td className="px-3 py-2 text-slate-400">Opsional</td>
+                              <td className="px-3 py-2">Alamat email calon klien</td>
+                            </tr>
+                            <tr>
+                              <td className="px-3 py-2 font-mono">company_name</td>
+                              <td className="px-3 py-2">String</td>
+                              <td className="px-3 py-2 text-slate-400">Opsional</td>
+                              <td className="px-3 py-2">Nama perusahaan / organisasi</td>
+                            </tr>
+                            <tr>
+                              <td className="px-3 py-2 font-mono">product_interest</td>
+                              <td className="px-3 py-2">String</td>
+                              <td className="px-3 py-2 text-slate-400">Opsional</td>
+                              <td className="px-3 py-2">Layanan yang diminati</td>
+                            </tr>
+                            <tr>
+                              <td className="px-3 py-2 font-mono">message</td>
+                              <td className="px-3 py-2">String</td>
+                              <td className="px-3 py-2 text-slate-400">Opsional</td>
+                              <td className="px-3 py-2">Catatan atau rincian kebutuhan</td>
+                            </tr>
+                            <tr>
+                              <td className="px-3 py-2 font-mono">utm_source</td>
+                              <td className="px-3 py-2">String</td>
+                              <td className="px-3 py-2 text-slate-400">Opsional</td>
+                              <td className="px-3 py-2">Sumber iklan (Google Ads, IG, dll)</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -1974,7 +2724,7 @@ if ($http_code === 201) {
             {/* Modal Footer */}
             <div className="p-4 border-t border-slate-100 flex items-center justify-between bg-slate-50 rounded-b-2xl">
               <span className="text-[11px] text-slate-500">
-                Dokumen IFA lengkap: <code>docs/IFA_INBOUND_LEADS_WEBHOOK.md</code>
+                Dokumen IFA lengkap: <code>{ifaCategory === 'livechat' ? 'docs/IFA_LIVECHAT_WEBCHAT.md' : 'docs/IFA_INBOUND_LEADS_WEBHOOK.md'}</code>
               </span>
               <button
                 type="button"

@@ -217,3 +217,54 @@ func (s *TicketService) AddTicketNote(workspaceID, currentUserID, ticketID strin
 func (s *TicketService) GetSupportStats(workspaceID string) (*domain.SupportReportResponse, error) {
 	return s.ticketRepo.GetSupportStats(workspaceID)
 }
+
+// ClaimTicket assigns a ticket to the current CS agent (Hybrid Claim/Pull model)
+func (s *TicketService) ClaimTicket(workspaceID, currentUserID, ticketID string) (*domain.Ticket, error) {
+	isAfterSales, err := s.ticketRepo.IsAfterSalesMember(workspaceID, currentUserID)
+	if err != nil || !isAfterSales {
+		return nil, errors.New("hanya staf CS / After-Sales yang dapat mengambil alih tiket ini")
+	}
+
+	ticket, err := s.ticketRepo.GetTicketByID(workspaceID, ticketID)
+	if err != nil {
+		return nil, err
+	}
+
+	assignedID := currentUserID
+	inProgressStatus := domain.TicketStatusInProgress
+	updateReq := domain.UpdateTicketRequest{
+		AssignedToID: &assignedID,
+	}
+	if ticket.Status == domain.TicketStatusOpen {
+		updateReq.Status = &inProgressStatus
+	}
+
+	updated, err := s.ticketRepo.UpdateTicket(workspaceID, ticketID, updateReq)
+	if err != nil {
+		return nil, err
+	}
+
+	// Also sync assignment to linked conversation if exists
+	if ticket.ConversationID != nil && *ticket.ConversationID != "" && s.inboxRepo != nil {
+		_ = s.inboxRepo.UpdateConversationAssignment(workspaceID, *ticket.ConversationID, &currentUserID)
+		_ = s.inboxRepo.UpdateConversationStatus(workspaceID, *ticket.ConversationID, domain.ConversationStatusOpen)
+	}
+
+	_ = s.ticketRepo.AddTicketActivity(&domain.TicketActivity{
+		TicketID:     ticketID,
+		UserID:       &currentUserID,
+		ActivityType: "assignment_change",
+		Note:         "Tiket diambil alih (Claimed) oleh agen CS untuk dikerjakan",
+	})
+
+	_ = s.auditRepo.LogEvent(&domain.AuditEvent{
+		WorkspaceID: workspaceID,
+		UserID:      &currentUserID,
+		Action:      "ticket_claimed",
+		EntityType:  "ticket",
+		EntityID:    ticketID,
+		Description: fmt.Sprintf("CS claimed support ticket %s", ticket.TicketNumber),
+	})
+
+	return updated, nil
+}

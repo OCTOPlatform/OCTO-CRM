@@ -490,7 +490,9 @@ func (r *InboxRepository) GetWorkspaceChannel(workspaceID, channelType string) (
 		FROM workspace_channels wc
 		LEFT JOIN users u ON wc.assigned_user_id = u.id
 		WHERE wc.workspace_id = $1 AND wc.channel_type = $2 AND wc.is_active = true
-		ORDER BY wc.created_at ASC
+		ORDER BY 
+			CASE WHEN wc.status = 'connected' THEN 0 ELSE 1 END,
+			wc.created_at DESC
 		LIMIT 1
 	`
 	err := r.db.Get(&c, query, workspaceID, channelType)

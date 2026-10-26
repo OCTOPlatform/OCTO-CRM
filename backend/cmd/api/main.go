@@ -70,6 +70,7 @@ func main() {
 	dealService.SetPillarService(pillarService)
 	inboxService.SetPillarService(pillarService)
 	inboxService.SetNotificationRepo(notificationRepo)
+	inboxService.SetTicketRepo(ticketRepo)
 	integrationService.SetPillarService(pillarService)
 	pillarService.SetDealRepo(dealRepo)
 	pillarService.SetTaskService(taskService)
@@ -135,6 +136,10 @@ func main() {
 
 		// Public Inbound Lead Intake Webhook (Ecosystem from OCTO-WEB / OCTO-TAP / Third-Party Forms)
 		api.POST("/workspaces/:workspace_id/integrations/lead-intake", integrationHandler.IngestLead)
+
+		// Public WebChat Widget Endpoints (Website Live Chat from OCTO-WEB)
+		api.POST("/workspaces/:workspace_id/inbox/webchat/send", inboxHandler.PublicWebChatSend)
+		api.GET("/workspaces/:workspace_id/inbox/webchat/messages", inboxHandler.PublicWebChatMessages)
 
 		// 2. Authenticated user routes
 		userAuth := api.Group("")
@@ -255,6 +260,7 @@ func main() {
 				ticketRoutes.POST("", ticketHandler.CreateTicket)
 				ticketRoutes.GET("/:ticket_id", ticketHandler.GetTicket)
 				ticketRoutes.PATCH("/:ticket_id", ticketHandler.UpdateTicket)
+				ticketRoutes.POST("/:ticket_id/claim", ticketHandler.ClaimTicket)
 				ticketRoutes.POST("/:ticket_id/notes", ticketHandler.AddTicketNote)
 				ticketRoutes.POST("/check-sla", pillarHandler.CheckSLAEscalation)
 			}

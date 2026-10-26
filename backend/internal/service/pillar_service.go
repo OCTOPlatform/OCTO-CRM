@@ -343,7 +343,7 @@ func (s *PillarService) SendDealOutreachWhatsApp(workspaceID, userID, dealID str
 
 	// Dispatch message via WAHA WhatsApp Gateway
 	sessionName := "default"
-	if ch, err := s.inboxRepo.GetWorkspaceChannelByUserID(workspaceID, userID); err == nil && ch != nil && ch.SessionName != "" {
+	if ch, err := s.inboxRepo.GetWorkspaceChannelByUserID(workspaceID, userID); err == nil && ch != nil && ch.SessionName != "" && ch.Status == "connected" {
 		sessionName = ch.SessionName
 	} else if ch, err := s.inboxRepo.GetWorkspaceChannel(workspaceID, "whatsapp"); err == nil && ch != nil && ch.SessionName != "" {
 		sessionName = ch.SessionName

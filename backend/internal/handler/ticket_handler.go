@@ -131,3 +131,17 @@ func (h *TicketHandler) GetSupportStats(c *gin.Context) {
 
 	c.JSON(http.StatusOK, domain.SuccessResponse(stats))
 }
+
+func (h *TicketHandler) ClaimTicket(c *gin.Context) {
+	workspaceID := c.GetString("workspaceID")
+	currentUserID := c.GetString("userID")
+	ticketID := c.Param("ticket_id")
+
+	updated, err := h.ticketService.ClaimTicket(workspaceID, currentUserID, ticketID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, domain.ErrorResponse(err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, domain.SuccessResponse(updated, "Tiket berhasil diambil alih"))
+}
