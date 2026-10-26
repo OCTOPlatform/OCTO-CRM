@@ -2,71 +2,113 @@
   {
     "step": "1. Autentikasi Login & Navigasi Dashboard",
     "status": "PASSED",
-    "duration_ms": 1992.5,
+    "duration_ms": 1700.46,
     "details": "Logged in as budi@octocrm.id",
     "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/02_dashboard_home.png"
   },
   {
     "step": "2. Halaman Today View & Pengurutan Tugas",
     "status": "PASSED",
-    "duration_ms": 1324.89,
+    "duration_ms": 1310.22,
     "details": "Task priority metrics rendered",
     "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/03_today_view.png"
   },
   {
     "step": "3. Manajemen Kontak & Validasi E.164",
     "status": "PASSED",
-    "duration_ms": 3197.82,
-    "details": "Contact created: Hendra_1780",
+    "duration_ms": 2739.5,
+    "details": "Contact created: Hendra_5755",
     "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/06_contacts_created.png"
   },
   {
     "step": "4. Tampilan Detail Kontak 360 Derajat & Timeline",
     "status": "PASSED",
-    "duration_ms": 1396.02,
+    "duration_ms": 1337.17,
     "details": "Contact timeline & profile rendered",
     "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/07_contact_detail_360.png"
   },
   {
     "step": "5. Direktori Perusahaan & Agregasi Akun",
     "status": "PASSED",
-    "duration_ms": 1408.36,
+    "duration_ms": 1313.81,
     "details": "Companies list rendered",
     "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/08_companies_directory.png"
   },
   {
     "step": "6. Papan Kanban Pipeline & Visualisasi Peluang",
     "status": "PASSED",
-    "duration_ms": 1479.19,
+    "duration_ms": 1665.15,
     "details": "Kanban board stages and deal cards visible",
     "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/09_deals_kanban_board.png"
   },
   {
     "step": "7. Manajemen Tugas Operasional Sales",
     "status": "PASSED",
-    "duration_ms": 1284.08,
+    "duration_ms": 1315.44,
     "details": "Task list & status filters rendered",
     "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/10_tasks_management.png"
   },
   {
     "step": "8. Laporan Analitik, Funnel & Distribusi Sumber Lead",
     "status": "PASSED",
-    "duration_ms": 1221.31,
+    "duration_ms": 1308.34,
     "details": "Conversion funnel and metrics rendered",
     "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/11_reports_analytics.png"
   },
   {
     "step": "9. Pengaturan Workspace & Matriks Peran Tim (RBAC)",
     "status": "PASSED",
-    "duration_ms": 1292.43,
+    "duration_ms": 1415.17,
     "details": "Workspace info and team members list verified",
     "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/12_settings_team_rbac.png"
   },
   {
     "step": "10. Integrasi Ekosistem: Ingestion Prospek Atomik Terverifikasi di UI",
     "status": "PASSED",
-    "duration_ms": 1539.05,
-    "details": "Inbound lead 'Mega Lestari 1790' successfully captured and rendered",
+    "duration_ms": 1755.82,
+    "details": "Inbound lead 'Mega Lestari 5765' successfully captured and rendered",
     "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/13_ecosystem_inbound_lead.png"
+  },
+  {
+    "step": "11. Helpdesk Tiket Bantuan CS & Aksi Hybrid Claim",
+    "status": "PASSED",
+    "duration_ms": 1410.27,
+    "details": "Tickets list and claim action rendered",
+    "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/14_cs_tickets_dashboard.png"
+  },
+  {
+    "step": "12. Ekosistem OCTO-WEB: Floating Live Chat Widget & Integrasi Kontak",
+    "status": "PASSED",
+    "duration_ms": 2426.67,
+    "details": "Live Chat widget popped up successfully",
+    "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/15_octo_web_live_chat.png"
+  },
+  {
+    "step": "13. Omnichannel Inbox: 2-Tier Header, Alihkan CS & Governance Bar",
+    "status": "PASSED",
+    "duration_ms": 2489.23,
+    "details": "2-tier room chat header and governance bar verified",
+    "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/16_inbox_room_2tier_header.png"
+  },
+  {
+    "step": "14. WhatsApp Broadcast Modal: Badge Divisi Otomatis & Smart Pacing",
+    "status": "PASSED",
+    "duration_ms": 2404.34,
+    "details": "Automatic division badge & anti-ban pacing verified",
+    "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/17_broadcast_divisi_badge_modal.png"
+  },
+  {
+    "step": "15. Dokumen IFA: Panduan Live Chat Widget & Formulir Website",
+    "status": "PASSED",
+    "duration_ms": 3571.36,
+    "details": "IFA Developer modal with WebChat & Forms categories verified",
+    "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/18_ifa_livechat_developer_modal.png"
+  },
+  {
+    "step": "16. Integrasi End-to-End: WebChat Publik Sinkron ke Omnichannel Inbox",
+    "status": "PASSED",
+    "duration_ms": 2067.87,
+    "details": "Webchat message from 'Calon Klien Web 779' rendered live in CRM Inbox",
+    "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/19_webchat_omnichannel_sync.png"
   }
 ]

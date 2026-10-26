@@ -31,6 +31,7 @@ type InboxService struct {
 	auditRepo        *repository.AuditRepository
 	notificationRepo *repository.NotificationRepo
 	pillarService    *PillarService
+	ticketRepo       *repository.TicketRepository
 	cfg              *config.Config
 	mu               sync.Mutex
 	subscribers      map[chan domain.InboxEvent]string
@@ -43,6 +44,10 @@ func (s *InboxService) SetPillarService(ps *PillarService) {
 
 func (s *InboxService) SetNotificationRepo(nr *repository.NotificationRepo) {
 	s.notificationRepo = nr
+}
+
+func (s *InboxService) SetTicketRepo(tr *repository.TicketRepository) {
+	s.ticketRepo = tr
 }
 
 func NewInboxService(
@@ -179,7 +184,7 @@ func (s *InboxService) GetWhatsAppConfig(workspaceID, userID, channelID string) 
 					if sessInfo.Status == "WORKING" {
 						status = "connected"
 						if sessInfo.Me != nil && sessInfo.Me.ID != "" && csNumber == "" {
-							csNumber = "+" + strings.TrimSuffix(sessInfo.Me.ID, "@c.us")
+							csNumber = "+" + strings.TrimLeft(strings.TrimSuffix(sessInfo.Me.ID, "@c.us"), "+")
 							targetChannel.PhoneNumber = csNumber
 							targetChannel.Status = "connected"
 							_ = s.inboxRepo.UpsertWorkspaceChannel(targetChannel)
@@ -231,10 +236,7 @@ func (s *InboxService) UpdateWorkspaceChannel(workspaceID string, req domain.Upd
 	if sessionName == "" {
 		sessionName = "default"
 	}
-	cleanPhone := repository.NormalizePhone(req.PhoneNumber)
-	if !strings.HasPrefix(cleanPhone, "+") {
-		cleanPhone = "+" + cleanPhone
-	}
+	cleanPhone := "+" + strings.TrimLeft(repository.NormalizePhone(req.PhoneNumber), "+")
 
 	ch := domain.WorkspaceChannel{
 		WorkspaceID: workspaceID,
@@ -287,7 +289,7 @@ func (s *InboxService) ListWorkspaceChannels(workspaceID string) ([]domain.Works
 			for _, ws := range wahaSessions {
 				statusMap[ws.Name] = ws.Status
 				if ws.Me.ID != "" {
-					phoneMap[ws.Name] = "+" + strings.TrimSuffix(ws.Me.ID, "@c.us")
+					phoneMap[ws.Name] = "+" + strings.TrimLeft(strings.TrimSuffix(ws.Me.ID, "@c.us"), "+")
 				}
 			}
 			for i := range channels {
@@ -324,9 +326,9 @@ func (s *InboxService) CreateWorkspaceChannel(workspaceID string, req domain.Cre
 		dept = "support"
 	}
 
-	cleanPhone := repository.NormalizePhone(req.PhoneNumber)
-	if cleanPhone != "" && !strings.HasPrefix(cleanPhone, "+") {
-		cleanPhone = "+" + cleanPhone
+	cleanPhone := ""
+	if req.PhoneNumber != "" {
+		cleanPhone = "+" + strings.TrimLeft(repository.NormalizePhone(req.PhoneNumber), "+")
 	}
 
 	ch := domain.WorkspaceChannel{
@@ -429,7 +431,7 @@ func (s *InboxService) GetChannelQRCode(workspaceID, channelID string) (map[stri
 		if sessInfo.Status == "WORKING" {
 			phone := ch.PhoneNumber
 			if sessInfo.Me.ID != "" {
-				phone = "+" + strings.TrimSuffix(sessInfo.Me.ID, "@c.us")
+				phone = "+" + strings.TrimLeft(strings.TrimSuffix(sessInfo.Me.ID, "@c.us"), "+")
 			}
 			return map[string]interface{}{
 				"status":       "connected",
@@ -565,9 +567,18 @@ func (s *InboxService) SendReply(workspaceID, currentUserID, conversationID stri
 	// Real Outbound WhatsApp dispatch
 	if channel == domain.ChannelWhatsApp {
 		sessionName := "default"
-		if ch, err := s.inboxRepo.GetWorkspaceChannel(workspaceID, "whatsapp"); err == nil && ch != nil {
-			if ch.SessionName != "" {
+		// 1. Highest priority: The specific channel linked to this conversation
+		if conv.ChannelID != nil && *conv.ChannelID != "" {
+			if ch, err := s.inboxRepo.GetWorkspaceChannelByID(workspaceID, *conv.ChannelID); err == nil && ch != nil && ch.SessionName != "" {
 				sessionName = ch.SessionName
+			}
+		}
+		// 2. Fallback to active/connected channel
+		if sessionName == "default" {
+			if ch, err := s.inboxRepo.GetWorkspaceChannel(workspaceID, "whatsapp"); err == nil && ch != nil {
+				if ch.SessionName != "" {
+					sessionName = ch.SessionName
+				}
 			}
 		}
 
@@ -634,9 +645,12 @@ func (s *InboxService) dispatchWAHA(wahaBaseURL, sessionName, toPhone, messageTe
 	wahaBaseURL = strings.TrimRight(wahaBaseURL, "/")
 	apiURL := fmt.Sprintf("%s/api/sendText", wahaBaseURL)
 
+	cleanText := strings.ReplaceAll(messageText, `\r\n`, "\n")
+	cleanText = strings.ReplaceAll(cleanText, `\n`, "\n")
+
 	payload := map[string]interface{}{
 		"chatId":  chatId,
-		"text":    messageText,
+		"text":    cleanText,
 		"session": sessionName,
 	}
 	bodyBytes, err := json.Marshal(payload)
@@ -824,9 +838,14 @@ func (s *InboxService) HandleIncomingMessage(workspaceID string, req domain.Inco
 		c, _ := s.contactRepo.FindContactByPhone(workspaceID, identifier)
 		if c != nil {
 			contactID = &c.ID
-			// If senderName has real profile name and current contact only has phone number/empty name, update contact!
+			// If senderName has real profile name and current contact only has phone number/empty name/placeholder, update contact!
 			currName := strings.TrimSpace(c.FirstName + " " + c.LastName)
-			if senderName != identifier && (currName == "" || currName == identifier || currName == c.Phone || strings.HasPrefix(currName, "+")) {
+			isPlaceholderName := currName == "" || currName == identifier || currName == c.Phone ||
+				strings.HasPrefix(currName, "+") || strings.EqualFold(currName, "test") ||
+				strings.EqualFold(currName, "tester") || strings.EqualFold(currName, "unknown") ||
+				strings.EqualFold(currName, "dummy") || strings.EqualFold(currName, "user") ||
+				strings.EqualFold(currName, "pelanggan") || strings.EqualFold(currName, "kontak")
+			if senderName != identifier && !strings.HasPrefix(senderName, "+") && isPlaceholderName {
 				parts := strings.SplitN(senderName, " ", 2)
 				c.FirstName = parts[0]
 				if len(parts) > 1 {
@@ -872,6 +891,34 @@ func (s *InboxService) HandleIncomingMessage(workspaceID string, req domain.Inco
 				LastName:    lastName,
 				Email:       identifier,
 				LeadSource:  "Email Inbound",
+			}
+			_ = s.contactRepo.CreateContact(&newContact)
+			contactID = &newContact.ID
+		}
+	} else if req.Channel == domain.ChannelWebChat {
+		var c *domain.Contact
+		if req.Email != "" {
+			c, _ = s.contactRepo.FindContactByEmail(workspaceID, req.Email)
+		}
+		if c == nil && req.Phone != "" {
+			c, _ = s.contactRepo.FindContactByPhone(workspaceID, req.Phone)
+		}
+		if c != nil {
+			contactID = &c.ID
+		} else {
+			parts := strings.SplitN(senderName, " ", 2)
+			firstName := parts[0]
+			lastName := ""
+			if len(parts) > 1 {
+				lastName = parts[1]
+			}
+			newContact := domain.Contact{
+				WorkspaceID: workspaceID,
+				FirstName:   firstName,
+				LastName:    lastName,
+				Email:       req.Email,
+				Phone:       req.Phone,
+				LeadSource:  "WebChat Inbound",
 			}
 			_ = s.contactRepo.CreateContact(&newContact)
 			contactID = &newContact.ID
@@ -922,8 +969,10 @@ func (s *InboxService) HandleIncomingMessage(workspaceID string, req domain.Inco
 		if conv.ChannelID == nil && req.ChannelID != "" {
 			_ = s.inboxRepo.UpdateConversationChannelID(workspaceID, convID, req.ChannelID)
 		}
-		// If subject was just phone number, update to profile name
-		if senderName != identifier && (conv.Subject == "" || conv.Subject == identifier || strings.Contains(conv.Subject, identifier)) {
+		// If subject was just phone number or placeholder, update to profile name
+		isPlaceholderSubject := conv.Subject == "" || conv.Subject == identifier || strings.Contains(conv.Subject, identifier) ||
+			strings.EqualFold(conv.Subject, "test") || strings.EqualFold(conv.Subject, "tester") || strings.EqualFold(conv.Subject, "unknown")
+		if senderName != identifier && !strings.HasPrefix(senderName, "+") && isPlaceholderSubject {
 			_ = s.inboxRepo.UpdateConversationSubject(workspaceID, convID, senderName)
 			conv.Subject = senderName
 		}
@@ -991,9 +1040,94 @@ func (s *InboxService) HandleIncomingMessage(workspaceID string, req domain.Inco
 		})
 	}
 
-	// 5. Bot Auto-Reply & Handoff Engine
+	// 5. Helpdesk Auto-Ticketing & Round-Robin Routing (After-Sales / Support)
+	convDept := "support"
+	if conv != nil && conv.Department != "" {
+		convDept = conv.Department
+	} else if req.Department != "" {
+		convDept = req.Department
+	}
+
+	if s.ticketRepo != nil && convDept == "support" {
+		// Rule C: Check if there is already an active ticket for this conversation
+		activeTicket, _ := s.ticketRepo.GetActiveTicketByConversation(workspaceID, convID)
+		if activeTicket != nil {
+			// Rule C: Message belongs to same ongoing ticket
+			_ = s.ticketRepo.AddTicketActivity(&domain.TicketActivity{
+				TicketID:     activeTicket.ID,
+				ActivityType: "note",
+				Note:         fmt.Sprintf("Pesan masuk dari pelanggan (%s): %s", strings.ToUpper(string(req.Channel)), msg.Content),
+			})
+		} else {
+			// Rule C: Otomatis 1 tiket saat pelanggan memulai percakapan baru
+			ticketNumber, err := s.ticketRepo.GenerateTicketNumber(workspaceID)
+			if err == nil {
+				// Rule A: Hybrid — Round-Robin / Least-Busy assignment ke staf CS After-Sales
+				var assignedCSID *string
+				var assignedCSName string
+
+				csAgents, _ := s.ticketRepo.GetAfterSalesAgents(workspaceID)
+				if len(csAgents) > 0 {
+					activeCounts, _ := s.ticketRepo.GetCSActiveTicketCounts(workspaceID)
+					bestAgent := csAgents[0]
+					minTickets := activeCounts[bestAgent.ID]
+
+					for _, ag := range csAgents[1:] {
+						count := activeCounts[ag.ID]
+						if count < minTickets {
+							minTickets = count
+							bestAgent = ag
+						}
+					}
+					assignedCSID = &bestAgent.ID
+					assignedCSName = bestAgent.FullName
+				}
+
+				subject := fmt.Sprintf("[%s] Bantuan: %s", strings.ToUpper(string(req.Channel)), senderName)
+				newTicket := domain.Ticket{
+					ID:             uuid.New().String(),
+					WorkspaceID:    workspaceID,
+					TicketNumber:   ticketNumber,
+					ConversationID: &convID,
+					ContactID:      contactID,
+					Subject:        subject,
+					Description:    msg.Content,
+					Category:       "general",
+					Priority:       domain.TicketPriorityMedium,
+					Status:         domain.TicketStatusOpen,
+					AssignedToID:   assignedCSID,
+					Department:     "support",
+				}
+
+				if err := s.ticketRepo.CreateTicket(&newTicket); err == nil {
+					if assignedCSID != nil {
+						_ = s.inboxRepo.UpdateConversationAssignment(workspaceID, convID, assignedCSID)
+					}
+
+					noteMsg := fmt.Sprintf("Tiket %s berhasil dibuat otomatis dari pesan masuk %s", ticketNumber, strings.ToUpper(string(req.Channel)))
+					if assignedCSName != "" {
+						noteMsg += fmt.Sprintf(" dan ditugaskan ke %s via Round-Robin", assignedCSName)
+					}
+					_ = s.ticketRepo.AddTicketActivity(&domain.TicketActivity{
+						TicketID:     newTicket.ID,
+						UserID:       assignedCSID,
+						ActivityType: "note",
+						Note:         noteMsg,
+					})
+
+					s.BroadcastEvent(domain.InboxEvent{
+						Type:           "conversation_updated",
+						WorkspaceID:    workspaceID,
+						ConversationID: convID,
+					})
+				}
+			}
+		}
+	}
+
+	// 6. Bot Auto-Reply & Handoff Engine
 	cFresh, _ := s.inboxRepo.GetConversationByID(workspaceID, convID)
-	if cFresh != nil && cFresh.BotActive && cFresh.AssignedToID == nil {
+	if cFresh != nil && cFresh.BotActive {
 		go s.ProcessBotReply(workspaceID, cFresh, &msg, senderName)
 	} else if s.pillarService != nil && req.Channel == domain.ChannelWhatsApp {
 		if cFresh != nil {
@@ -1002,6 +1136,53 @@ func (s *InboxService) HandleIncomingMessage(workspaceID string, req domain.Inco
 	}
 
 	return &msg, nil
+}
+
+// GetPublicWebChatHistory retrieves public message history for visitor web chat widget
+func (s *InboxService) GetPublicWebChatHistory(workspaceID, visitorID string) (*domain.PublicWebChatHistoryResponse, error) {
+	conv, err := s.inboxRepo.GetConversationByChannelIdentifier(workspaceID, domain.ChannelWebChat, visitorID)
+	if err != nil || conv == nil {
+		return &domain.PublicWebChatHistoryResponse{
+			Status:   "new",
+			Messages: []domain.PublicWebChatMessageItem{},
+		}, nil
+	}
+
+	msgs, err := s.inboxRepo.ListMessages(conv.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	items := make([]domain.PublicWebChatMessageItem, 0, len(msgs))
+	for _, m := range msgs {
+		items = append(items, domain.PublicWebChatMessageItem{
+			ID:         m.ID,
+			SenderType: m.SenderType,
+			SenderName: m.SenderName,
+			Content:    m.Content,
+			CreatedAt:  m.CreatedAt,
+		})
+	}
+
+	assignedName := ""
+	if conv.AssignedToName != nil {
+		assignedName = *conv.AssignedToName
+	}
+
+	ticketNum := ""
+	if s.ticketRepo != nil {
+		if actTicket, _ := s.ticketRepo.GetActiveTicketByConversation(workspaceID, conv.ID); actTicket != nil {
+			ticketNum = actTicket.TicketNumber
+		}
+	}
+
+	return &domain.PublicWebChatHistoryResponse{
+		ConversationID: conv.ID,
+		TicketNumber:   ticketNum,
+		AssignedToName: assignedName,
+		Status:         string(conv.Status),
+		Messages:       items,
+	}, nil
 }
 
 // ToggleBot enables or disables the automated chatbot for a conversation
@@ -1068,6 +1249,8 @@ func (s *InboxService) ProcessBotReply(workspaceID string, conv *domain.Conversa
 			out = strings.ReplaceAll(out, "{menu_3_title}", settings.Menu3Title)
 			out = strings.ReplaceAll(out, "{menu_4_title}", settings.Menu4Title)
 		}
+		out = strings.ReplaceAll(out, `\r\n`, "\n")
+		out = strings.ReplaceAll(out, `\n`, "\n")
 		return out
 	}
 
@@ -1110,16 +1293,18 @@ func (s *InboxService) ProcessBotReply(workspaceID string, conv *domain.Conversa
 		// Custom FAQ reply
 	} else if text == "menu" || text == "bantuan" || text == "info" || text == "help" ||
 		text == "halo" || text == "hi" || text == "hai" || text == "halo bot" ||
-		text == "pagi" || text == "siang" || text == "sore" || text == "malam" ||
-		text == "assalamualaikum" || text == "permisi" || text == "tes" || text == "test" ||
-		text == "halo admin" || text == "start" {
+		text == "start" || text == "mulai" || text == "p" ||
+		strings.HasPrefix(text, "halo") || strings.HasPrefix(text, "hai") || strings.HasPrefix(text, "hi ") ||
+		strings.Contains(text, "pagi") || strings.Contains(text, "siang") || strings.Contains(text, "sore") || strings.Contains(text, "malam") ||
+		strings.Contains(text, "assalam") || strings.Contains(text, "permisi") || strings.Contains(text, "tes") || strings.Contains(text, "test") {
 		if settings != nil && settings.GreetingMessage != "" {
 			botReply = interpolate(settings.GreetingMessage)
 		} else {
 			botReply = fmt.Sprintf("Halo %s! 👋 Selamat datang di Layanan Pelanggan %s.\n\nSaya adalah Asisten Virtual Otomatis. Saya siap membantu Anda 24/7. Silakan pilih menu informasi berikut:\n\n1️⃣ Informasi Produk & Layanan\n2️⃣ Paket Harga & Penawaran\n3️⃣ Jam Operasional & Alamat Kantor\n4️⃣ Hubungi Tim Customer Service (CS) Manusia\n\nSilakan ketik nomor (1-4) atau tuliskan pertanyaan Anda langsung ya!", displayName, companyName)
 		}
 
-	} else if text == "1" || (settings != nil && matchKeywords(settings.Menu1Keywords)) ||
+	} else if text == "1" || strings.HasPrefix(text, "1.") || strings.HasPrefix(text, "1 ") ||
+		(settings != nil && matchKeywords(settings.Menu1Keywords)) ||
 		strings.Contains(text, "produk") || strings.Contains(text, "fitur") || strings.Contains(text, "layanan") {
 		if settings != nil && settings.Menu1Response != "" {
 			botReply = interpolate(settings.Menu1Response)
@@ -1127,25 +1312,31 @@ func (s *InboxService) ProcessBotReply(workspaceID string, conv *domain.Conversa
 			botReply = fmt.Sprintf("Berikut adalah informasi produk dan layanan unggulan dari %s. Kami berkomitmen memberikan solusi terbaik untuk kebutuhan Anda.\n\nKetik *2* untuk melihat paket harga, atau ketik *CS* jika ingin berbicara langsung dengan tim kami!", companyName)
 		}
 
-	} else if text == "2" || (settings != nil && matchKeywords(settings.Menu2Keywords)) ||
-		strings.Contains(text, "harga") || strings.Contains(text, "paket") || strings.Contains(text, "biaya") || strings.Contains(text, "tarif") {
+	} else if text == "2" || strings.HasPrefix(text, "2.") || strings.HasPrefix(text, "2 ") ||
+		(settings != nil && matchKeywords(settings.Menu2Keywords)) ||
+		strings.Contains(text, "harga") || strings.Contains(text, "paket") || strings.Contains(text, "biaya") || strings.Contains(text, "tarif") || strings.Contains(text, "pricelist") {
 		if settings != nil && settings.Menu2Response != "" {
 			botReply = interpolate(settings.Menu2Response)
 		} else {
 			botReply = "Kami menyediakan berbagai paket penawaran fleksibel yang dapat disesuaikan dengan kebutuhan Anda.\n\nKetik *CS* untuk mendapatkan simulasi perhitungan biaya dan proposal penawaran resmi dari tim Sales kami!"
 		}
 
-	} else if text == "3" || (settings != nil && matchKeywords(settings.Menu3Keywords)) ||
-		strings.Contains(text, "jam operasional") || strings.Contains(text, "jam kerja") || strings.Contains(text, "alamat") || strings.Contains(text, "kantor") {
+	} else if text == "3" || strings.HasPrefix(text, "3.") || strings.HasPrefix(text, "3 ") ||
+		(settings != nil && matchKeywords(settings.Menu3Keywords)) ||
+		strings.Contains(text, "jam operasional") || strings.Contains(text, "jam kerja") || strings.Contains(text, "alamat") || strings.Contains(text, "kantor") || strings.Contains(text, "lokasi") {
 		if settings != nil && settings.Menu3Response != "" {
 			botReply = interpolate(settings.Menu3Response)
 		} else {
 			botReply = "⏰ *Jam Operasional Kantor:* \nSenin - Jumat: 08:00 - 18:00 WIB\nSabtu: 09:00 - 15:00 WIB\n(Layanan Chatbot & Monitoring Darurat aktif 24/7)\n\n📍 *Alamat Kantor:* \nSilakan hubungi tim kami untuk jadwal kunjungan atau panduan lokasi."
 		}
 
-	} else if text == "4" || (settings != nil && matchKeywords(settings.Menu4Keywords)) ||
-		text == "cs" || strings.Contains(text, "komplain") || strings.Contains(text, "keluhan") ||
-		strings.Contains(text, "bicara dengan orang") || strings.Contains(text, "manusia") {
+	} else if text == "4" || strings.HasPrefix(text, "4.") || strings.HasPrefix(text, "4 ") ||
+		(settings != nil && matchKeywords(settings.Menu4Keywords)) ||
+		text == "cs" || strings.HasPrefix(text, "cs ") || strings.Contains(text, "customer service") ||
+		strings.Contains(text, "komplain") || strings.Contains(text, "keluhan") ||
+		strings.Contains(text, "bicara dengan orang") || strings.Contains(text, "bicara dengan cs") ||
+		strings.Contains(text, "manusia") || strings.Contains(text, "bantuan admin") ||
+		strings.Contains(text, "bicara dengan agen") {
 		// Explicit request to talk to human CS
 		isHandoff = true
 		handoffReason = content
@@ -1156,15 +1347,16 @@ func (s *InboxService) ProcessBotReply(workspaceID string, conv *domain.Conversa
 		}
 
 	} else {
-		// Fallback / Complex Question / Out-of-Scope / Request Human CS / Komplain / Kendala
-		isHandoff = true
-		handoffReason = content
-		if settings != nil && settings.HandoffMessage != "" {
-			botReply = interpolate(settings.HandoffMessage)
+		// Fallback: If not recognized, send interactive menu without immediately deactivating the bot
+		if settings != nil && settings.GreetingMessage != "" {
+			botReply = interpolate(settings.GreetingMessage)
 		} else {
-			botReply = fmt.Sprintf("Baik %s, pertanyaan Anda memerlukan penanganan langsung dari tim Customer Service (CS) kami. 👨‍💼👩‍💼\n\nPesan Anda telah kami alihkan ke agen manusia kami dan tim kami sudah menerima notifikasi prioritas untuk segera membalas percakapan ini.\n\nMohon ditunggu sebentar ya kak, agen CS kami akan segera bergabung dalam obrolan ini! 🙏", displayName)
+			botReply = fmt.Sprintf("Halo %s! 👋 Terima kasih telah menghubungi Layanan Pelanggan %s.\n\nSaya adalah Asisten Virtual Otomatis. Silakan pilih menu informasi berikut:\n\n1️⃣ Informasi Produk & Layanan\n2️⃣ Paket Harga & Penawaran\n3️⃣ Jam Operasional & Alamat Kantor\n4️⃣ Hubungi Tim Customer Service (CS) Manusia\n\nSilakan ketik angka (1-4) atau ketik *CS* jika Anda membutuhkan penanganan langsung oleh tim kami!", displayName, companyName)
 		}
 	}
+
+	botReply = strings.ReplaceAll(botReply, `\r\n`, "\n")
+	botReply = strings.ReplaceAll(botReply, `\n`, "\n")
 
 	// 1. Create Bot Message in DB
 	botMsg := domain.Message{
@@ -1545,6 +1737,36 @@ func (s *InboxService) SyncWhatsAppHistory(workspaceID, sessionName, channelID s
 				contactName = strings.TrimSpace(ch.Pushname)
 			}
 		}
+
+		// Try querying WAHA contact profile if name is still empty or phone
+		if (contactName == "" || contactName == phone) && !isGroup {
+			phoneDigits := repository.NormalizePhone(phone)
+			reqContact, errReq := http.NewRequest("GET", fmt.Sprintf("%s/api/contacts?contactId=%s@c.us&session=%s", wahaURL, phoneDigits, sessionName), nil)
+			if errReq == nil {
+				if s.cfg.WhatsAppToken != "" {
+					reqContact.Header.Set("X-Api-Key", s.cfg.WhatsAppToken)
+				}
+				respContact, errDo := client.Do(reqContact)
+				if errDo == nil && respContact.StatusCode == http.StatusOK {
+					var contactData struct {
+						Name     string `json:"name"`
+						Pushname string `json:"pushname"`
+						PushName string `json:"pushName"`
+					}
+					if json.NewDecoder(respContact.Body).Decode(&contactData) == nil {
+						if strings.TrimSpace(contactData.Pushname) != "" {
+							contactName = strings.TrimSpace(contactData.Pushname)
+						} else if strings.TrimSpace(contactData.PushName) != "" {
+							contactName = strings.TrimSpace(contactData.PushName)
+						} else if strings.TrimSpace(contactData.Name) != "" {
+							contactName = strings.TrimSpace(contactData.Name)
+						}
+					}
+					respContact.Body.Close()
+				}
+			}
+		}
+
 		if contactName == "" {
 			if isGroup {
 				contactName = "Grup WhatsApp"
@@ -1559,9 +1781,13 @@ func (s *InboxService) SyncWhatsAppHistory(workspaceID, sessionName, channelID s
 			c, _ := s.contactRepo.FindContactByPhone(workspaceID, phone)
 			if c != nil {
 				contactID = &c.ID
-				// If contactName has real profile name and current contact only has phone number/empty name, update contact!
+				// If contactName has real profile name and current contact only has phone number/empty name/placeholder, update contact!
 				currName := strings.TrimSpace(c.FirstName + " " + c.LastName)
-				if contactName != phone && (currName == "" || currName == phone || strings.HasPrefix(currName, "+")) {
+				isPlaceholderName := currName == "" || currName == phone || strings.HasPrefix(currName, "+") ||
+					strings.EqualFold(currName, "test") || strings.EqualFold(currName, "tester") || strings.EqualFold(currName, "unknown") ||
+					strings.EqualFold(currName, "dummy") || strings.EqualFold(currName, "user") ||
+					strings.EqualFold(currName, "pelanggan") || strings.EqualFold(currName, "kontak")
+				if contactName != phone && !strings.HasPrefix(contactName, "+") && isPlaceholderName {
 					parts := strings.SplitN(contactName, " ", 2)
 					c.FirstName = parts[0]
 					if len(parts) > 1 {
@@ -1621,7 +1847,9 @@ func (s *InboxService) SyncWhatsAppHistory(workspaceID, sessionName, channelID s
 			if conv.ChannelID == nil && channelID != "" {
 				_ = s.inboxRepo.UpdateConversationChannelID(workspaceID, convID, channelID)
 			}
-			if contactName != phone && (conv.Subject == "" || conv.Subject == phone || strings.Contains(conv.Subject, phone)) {
+			isPlaceholderSubj := conv.Subject == "" || conv.Subject == phone || strings.Contains(conv.Subject, phone) ||
+				strings.EqualFold(conv.Subject, "test") || strings.EqualFold(conv.Subject, "tester") || strings.EqualFold(conv.Subject, "unknown")
+			if contactName != phone && !strings.HasPrefix(contactName, "+") && isPlaceholderSubj {
 				_ = s.inboxRepo.UpdateConversationSubject(workspaceID, convID, contactName)
 			}
 		}

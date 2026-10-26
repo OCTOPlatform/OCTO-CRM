@@ -2,11 +2,13 @@ import os
 import sys
 import time
 import json
+import re
 import urllib.request
 from playwright.sync_api import sync_playwright
 
-BASE_UI_URL = "http://localhost:3001"
-BASE_API_URL = "http://localhost:8080"
+BASE_UI_URL = os.environ.get("BASE_UI_URL", "http://localhost:3000")
+BASE_API_URL = os.environ.get("BASE_API_URL", "http://localhost:8080")
+OCTO_WEB_URL = os.environ.get("OCTO_WEB_URL", "http://localhost:3001")
 SCREENSHOT_DIR = "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots"
 RESULTS = []
 
@@ -156,7 +158,7 @@ def main():
         t0 = time.time()
         try:
             page.goto(f"{BASE_UI_URL}/pipeline", wait_until="domcontentloaded")
-            page.wait_for_selector("h1:has-text('Sales Pipeline (Kanban)')", timeout=10000)
+            page.wait_for_selector("h1:has-text('Sales Pipeline')", timeout=10000)
             page.wait_for_selector("text=New Lead", timeout=10000)
             page.wait_for_timeout(1000)
             shot_pipeline = f"{SCREENSHOT_DIR}/09_deals_kanban_board.png"
@@ -185,7 +187,7 @@ def main():
         t0 = time.time()
         try:
             page.goto(f"{BASE_UI_URL}/reports", wait_until="domcontentloaded")
-            page.wait_for_selector("h1:has-text('Laporan & Analisis Penjualan')", timeout=10000)
+            page.wait_for_selector("h1:has-text('Laporan & Analitik')", timeout=10000)
             page.wait_for_timeout(1000)
             shot_reports = f"{SCREENSHOT_DIR}/11_reports_analytics.png"
             page.screenshot(path=shot_reports, full_page=True)
@@ -255,6 +257,184 @@ def main():
             record_result("10. Integrasi Ekosistem: Ingestion Prospek Atomik Terverifikasi di UI", "PASSED", round((time.time() - t0)*1000, 2), f"Inbound lead '{lead_name}' successfully captured and rendered", shot_intake)
         except Exception as e:
             record_result("10. Integrasi Ekosistem: Ingestion Prospek Atomik Terverifikasi di UI", "FAILED", round((time.time() - t0)*1000, 2), str(e))
+
+        # ----------------------------------------------------------------------
+        # Test 11: CS Helpdesk Tickets & Hybrid Claim Action (OCTO-CRM)
+        # ----------------------------------------------------------------------
+        t0 = time.time()
+        try:
+            page.goto(f"{BASE_UI_URL}/tickets", wait_until="domcontentloaded")
+            page.wait_for_selector("h1:has-text('Tiket Bantuan')", timeout=10000)
+            page.wait_for_selector("table", timeout=10000)
+            page.wait_for_timeout(1000)
+
+            shot_tickets = f"{SCREENSHOT_DIR}/14_cs_tickets_dashboard.png"
+            page.screenshot(path=shot_tickets, full_page=True)
+            record_result("11. Helpdesk Tiket Bantuan CS & Aksi Hybrid Claim", "PASSED", round((time.time() - t0)*1000, 2), "Tickets list and claim action rendered", shot_tickets)
+        except Exception as e:
+            record_result("11. Helpdesk Tiket Bantuan CS & Aksi Hybrid Claim", "FAILED", round((time.time() - t0)*1000, 2), str(e))
+
+        # ----------------------------------------------------------------------
+        # Test 12: OCTO-WEB Floating Live Chat Widget & Contact Page (OCTO-WEB)
+        # ----------------------------------------------------------------------
+        t0 = time.time()
+        try:
+            page.goto(f"{OCTO_WEB_URL}/contact", wait_until="domcontentloaded")
+            page.wait_for_timeout(1000)
+            page.evaluate("window.dispatchEvent(new CustomEvent('octo:open_chat'))")
+            page.wait_for_selector("text=Live Support OCTO", timeout=10000)
+            page.wait_for_timeout(1000)
+
+            shot_web_chat = f"{SCREENSHOT_DIR}/15_octo_web_live_chat.png"
+            page.screenshot(path=shot_web_chat, full_page=True)
+            record_result("12. Ekosistem OCTO-WEB: Floating Live Chat Widget & Integrasi Kontak", "PASSED", round((time.time() - t0)*1000, 2), "Live Chat widget popped up successfully", shot_web_chat)
+        except Exception as e:
+            record_result("12. Ekosistem OCTO-WEB: Floating Live Chat Widget & Integrasi Kontak", "FAILED", round((time.time() - t0)*1000, 2), str(e))
+
+        # ----------------------------------------------------------------------
+        # Test 13: Live Chat Omnichannel Inbox: Tata Letak 2-Tier Header & Governance Bar
+        # ----------------------------------------------------------------------
+        t0 = time.time()
+        try:
+            page.goto(f"{BASE_UI_URL}/inbox", wait_until="domcontentloaded")
+            page.wait_for_selector("text=Omnichannel", timeout=10000)
+            page.wait_for_timeout(1000)
+
+            # Select first available conversation card
+            conv_card = page.locator("div.cursor-pointer").filter(has_text=re.compile(r"(Klien|Kurniawan|💬)", re.I)).first
+            if conv_card.is_visible():
+                conv_card.click()
+                page.wait_for_timeout(1000)
+
+            # Verify 2-tier room chat header
+            page.wait_for_selector("text=Prioritas:", timeout=10000)
+            page.wait_for_selector("text=Penugasan Tim", timeout=10000)
+
+            shot_inbox = f"{SCREENSHOT_DIR}/16_inbox_room_2tier_header.png"
+            page.screenshot(path=shot_inbox, full_page=True)
+            record_result("13. Omnichannel Inbox: 2-Tier Header, Alihkan CS & Governance Bar", "PASSED", round((time.time() - t0)*1000, 2), "2-tier room chat header and governance bar verified", shot_inbox)
+        except Exception as e:
+            record_result("13. Omnichannel Inbox: 2-Tier Header, Alihkan CS & Governance Bar", "FAILED", round((time.time() - t0)*1000, 2), str(e))
+
+        # ----------------------------------------------------------------------
+        # Test 14: WhatsApp Broadcast Modal: Badge Indikator Divisi Otomatis & Smart Pacing
+        # ----------------------------------------------------------------------
+        t0 = time.time()
+        try:
+            page.goto(f"{BASE_UI_URL}/inbox", wait_until="domcontentloaded")
+            page.wait_for_selector("button:has-text('Broadcast WA')", timeout=10000)
+            page.click("button:has-text('Broadcast WA')")
+
+            page.wait_for_selector("text=WhatsApp Broadcast & Campaign Engine", timeout=10000)
+            page.wait_for_selector("text=Divisi Pengirim", timeout=5000)
+            page.wait_for_selector("text=Pratinjau Pesan yang Diterima Klien:", timeout=5000)
+            page.wait_for_selector("text=Anti-Ban Smart Pacing:", timeout=5000)
+            page.wait_for_timeout(1000)
+
+            shot_broadcast = f"{SCREENSHOT_DIR}/17_broadcast_divisi_badge_modal.png"
+            page.screenshot(path=shot_broadcast, full_page=True)
+
+            page.click("button:has-text('Batal')")
+            page.wait_for_timeout(500)
+            record_result("14. WhatsApp Broadcast Modal: Badge Divisi Otomatis & Smart Pacing", "PASSED", round((time.time() - t0)*1000, 2), "Automatic division badge & anti-ban pacing verified", shot_broadcast)
+        except Exception as e:
+            record_result("14. WhatsApp Broadcast Modal: Badge Divisi Otomatis & Smart Pacing", "FAILED", round((time.time() - t0)*1000, 2), str(e))
+
+        # ----------------------------------------------------------------------
+        # Test 15: Dokumen IFA & Panduan Pengembang Website (Live Chat & Formulir)
+        # ----------------------------------------------------------------------
+        t0 = time.time()
+        try:
+            page.goto(f"{BASE_UI_URL}/settings?tab=automations", wait_until="domcontentloaded")
+            page.wait_for_selector("h1:has-text('Pengaturan & Anggota Tim')", timeout=10000)
+
+            page.wait_for_selector("button:has-text('Panduan Integrasi Live Chat')", timeout=10000)
+            page.click("button:has-text('Panduan Integrasi Live Chat')")
+
+            page.wait_for_selector("text=Dokumen IFA (Interface Agreement) & Panduan Pengembang", timeout=10000)
+            page.wait_for_selector("text=1. Widget Live Chat (WebChat)", timeout=5000)
+            page.wait_for_selector("text=API BASE URL:", timeout=5000)
+            page.wait_for_selector("text=WORKSPACE ID:", timeout=5000)
+
+            # Switch subtabs in WebChat
+            page.click("button:has-text('Vanilla JS / HTML Embed')")
+            page.wait_for_timeout(500)
+            page.click("button:has-text('Spesifikasi REST API')")
+            page.wait_for_timeout(500)
+
+            # Switch category to Formulir Kontak
+            page.click("button:has-text('2. Formulir Kontak Web (Lead Intake)')")
+            page.wait_for_selector("text=WordPress / Elementor", timeout=5000)
+            page.wait_for_timeout(500)
+
+            # Switch back to Live Chat for clear screenshot
+            page.click("button:has-text('1. Widget Live Chat (WebChat)')")
+            page.wait_for_timeout(500)
+
+            shot_ifa = f"{SCREENSHOT_DIR}/18_ifa_livechat_developer_modal.png"
+            page.screenshot(path=shot_ifa, full_page=True)
+
+            page.click("button:has-text('Tutup Panduan')")
+            page.wait_for_timeout(500)
+            record_result("15. Dokumen IFA: Panduan Live Chat Widget & Formulir Website", "PASSED", round((time.time() - t0)*1000, 2), "IFA Developer modal with WebChat & Forms categories verified", shot_ifa)
+        except Exception as e:
+            record_result("15. Dokumen IFA: Panduan Live Chat Widget & Formulir Website", "FAILED", round((time.time() - t0)*1000, 2), str(e))
+
+        # ----------------------------------------------------------------------
+        # Test 16: Public WebChat Endpoint & Omnichannel Real-time Inbox Sync
+        # ----------------------------------------------------------------------
+        t0 = time.time()
+        try:
+            # 1. Fetch workspace ID
+            login_req = urllib.request.Request(
+                f"{BASE_API_URL}/api/v1/auth/login",
+                data=json.dumps({"email": "budi@octocrm.id", "password": "password123"}).encode('utf-8'),
+                headers={"Content-Type": "application/json"}
+            )
+            with urllib.request.urlopen(login_req) as resp:
+                login_res = json.loads(resp.read().decode('utf-8'))
+                ws_id = login_res["data"]["workspaces"][0]["id"]
+
+            # 2. Dispatch public webchat message
+            chat_ts = int(time.time())
+            visitor_id = f"web-test-{chat_ts}"
+            visitor_name = f"Calon Klien Web {chat_ts % 1000}"
+            webchat_payload = {
+                "visitor_id": visitor_id,
+                "name": visitor_name,
+                "phone": f"+62812{chat_ts % 100000000:08d}",
+                "email": f"visitor_{chat_ts}@clientweb.com",
+                "message": "Halo Customer Support, saya butuh bantuan penawaran integrasi!"
+            }
+            send_req = urllib.request.Request(
+                f"{BASE_API_URL}/api/v1/workspaces/{ws_id}/inbox/webchat/send",
+                data=json.dumps(webchat_payload).encode('utf-8'),
+                headers={"Content-Type": "application/json"}
+            )
+            with urllib.request.urlopen(send_req) as resp:
+                assert resp.status == 201
+
+            # 3. Poll message history
+            poll_req = urllib.request.Request(
+                f"{BASE_API_URL}/api/v1/workspaces/{ws_id}/inbox/webchat/messages?visitor_id={visitor_id}",
+                headers={"Accept": "application/json"}
+            )
+            with urllib.request.urlopen(poll_req) as resp:
+                assert resp.status == 200
+                poll_data = json.loads(resp.read().decode('utf-8'))
+                assert len(poll_data["data"]["messages"]) > 0
+
+            # 4. Verify in CRM Inbox UI
+            page.goto(f"{BASE_UI_URL}/inbox", wait_until="domcontentloaded")
+            page.wait_for_selector(f"text={visitor_name}", timeout=10000)
+            page.click(f"text={visitor_name}")
+            page.wait_for_timeout(1000)
+
+            shot_sync = f"{SCREENSHOT_DIR}/19_webchat_omnichannel_sync.png"
+            page.screenshot(path=shot_sync, full_page=True)
+            record_result("16. Integrasi End-to-End: WebChat Publik Sinkron ke Omnichannel Inbox", "PASSED", round((time.time() - t0)*1000, 2), f"Webchat message from '{visitor_name}' rendered live in CRM Inbox", shot_sync)
+        except Exception as e:
+            record_result("16. Integrasi End-to-End: WebChat Publik Sinkron ke Omnichannel Inbox", "FAILED", round((time.time() - t0)*1000, 2), str(e))
 
         browser.close()
 

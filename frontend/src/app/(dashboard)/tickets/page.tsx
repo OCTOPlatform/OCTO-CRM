@@ -199,6 +199,20 @@ export default function TicketsPage() {
     }
   };
 
+  const handleClaimTicket = async (ticketId: string) => {
+    if (!currentWorkspace) return;
+    try {
+      const updated = await api.claimTicket(currentWorkspace.id, ticketId);
+      if (selectedTicket && selectedTicket.id === ticketId) {
+        setSelectedTicket(updated);
+      }
+      setTickets((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+      alert(`Berhasil mengambil alih tiket ${updated.ticket_number}!`);
+    } catch (e: any) {
+      alert(e.message || 'Gagal mengambil alih tiket');
+    }
+  };
+
   const handleAddNote = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentWorkspace || !selectedTicket || !newNote.trim()) return;
@@ -482,7 +496,19 @@ export default function TicketsPage() {
                           {t.ticket_number}
                         </td>
                         <td className="py-3.5 px-4 font-semibold text-slate-800 max-w-[260px] truncate">
-                          {t.subject}
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {t.subject.toLowerCase().includes('whatsapp') && (
+                              <span className="px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-bold">
+                                WhatsApp
+                              </span>
+                            )}
+                            {t.subject.toLowerCase().includes('webchat') && (
+                              <span className="px-1.5 py-0.2 rounded bg-cyan-50 text-[#00AFC4] border border-cyan-200 text-[9px] font-bold">
+                                Live Chat
+                              </span>
+                            )}
+                            <span className="truncate">{t.subject}</span>
+                          </div>
                           <p className="text-[11px] text-slate-400 font-normal truncate mt-0.5">
                             {t.description || 'Tidak ada deskripsi'}
                           </p>
@@ -528,6 +554,19 @@ export default function TicketsPage() {
                             <span className="text-slate-700 font-medium">
                               {t.assigned_to_name || 'Belum di-assign'}
                             </span>
+                            {t.assigned_to_id !== user?.id && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleClaimTicket(t.id);
+                                }}
+                                className="ml-1 px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 text-[10px] font-bold transition whitespace-nowrap cursor-pointer shadow-2xs"
+                                title="Ambil alih tiket ini untuk saya kerjakan"
+                              >
+                                Ambil Alih
+                              </button>
+                            )}
                           </div>
                         </td>
                         <td className="py-3.5 px-4 text-right whitespace-nowrap">
@@ -688,6 +727,39 @@ export default function TicketsPage() {
 
             {/* Modal Body: Controls & Internal Chatter */}
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* Quick Actions: Claim Ticket & Open Live Chat */}
+              <div className="flex items-center justify-between flex-wrap gap-2 p-3.5 bg-cyan-50/70 border border-cyan-200 rounded-2xl">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-semibold text-slate-700">PIC Penanggung Jawab:</span>
+                  <span className="text-xs font-bold text-slate-900 bg-white px-2.5 py-1 rounded-lg border border-slate-200">
+                    {selectedTicket.assigned_to_name || 'Belum Ditugaskan'}
+                  </span>
+                  {selectedTicket.assigned_to_id !== user?.id && (
+                    <button
+                      type="button"
+                      onClick={() => handleClaimTicket(selectedTicket.id)}
+                      className="px-3 py-1 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-xs transition flex items-center gap-1 cursor-pointer"
+                      title="Ambil alih tiket ini untuk Anda kerjakan"
+                    >
+                      <UserCheck className="w-3.5 h-3.5" />
+                      Ambil Alih (Claim Tiket)
+                    </button>
+                  )}
+                </div>
+
+                {selectedTicket.conversation_id && (
+                  <Link
+                    href={`/inbox?conversation_id=${selectedTicket.conversation_id}`}
+                    className="px-3.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition flex items-center gap-1.5"
+                    title="Buka obrolan pelanggan di Live Chat"
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    <span>Buka Percakapan di Live Chat</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                )}
+              </div>
+
               {/* Row Handover & Assignment Controls */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
                 <div>

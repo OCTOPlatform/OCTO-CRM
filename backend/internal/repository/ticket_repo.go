@@ -421,3 +421,76 @@ func (r *TicketRepository) IsAfterSalesMember(workspaceID, userID string) (bool,
 	}
 	return count > 0, nil
 }
+
+// GetActiveTicketByConversation checks if an active ticket exists for a conversation
+func (r *TicketRepository) GetActiveTicketByConversation(workspaceID, conversationID string) (*domain.Ticket, error) {
+	query := `
+		SELECT 
+			t.id, t.workspace_id, t.ticket_number, t.conversation_id, t.contact_id,
+			COALESCE(c.first_name || ' ' || c.last_name, '') AS contact_name,
+			COALESCE(c.phone, '') AS contact_phone,
+			COALESCE(c.email, '') AS contact_email,
+			t.subject, t.description, t.category, t.priority, t.status,
+			t.assigned_to_id, COALESCE(u.full_name, '') AS assigned_to_name,
+			t.created_by_id, COALESCE(creator.full_name, '') AS created_by_name,
+			t.department, t.sla_due_at, t.frt_due_at, t.first_responded_at, t.is_sla_breached, t.resolved_at, t.created_at, t.updated_at
+		FROM tickets t
+		LEFT JOIN contacts c ON t.contact_id = c.id
+		LEFT JOIN users u ON t.assigned_to_id = u.id
+		LEFT JOIN users creator ON t.created_by_id = creator.id
+		WHERE t.workspace_id = $1 AND t.conversation_id = $2
+		  AND t.status IN ('open', 'in_progress', 'escalated')
+		ORDER BY t.created_at DESC
+		LIMIT 1
+	`
+	var ticket domain.Ticket
+	err := r.db.Get(&ticket, query, workspaceID, conversationID)
+	if err != nil {
+		return nil, err
+	}
+	return &ticket, nil
+}
+
+// GetAfterSalesAgents returns all members in the workspace eligible for CS support ticket assignment
+func (r *TicketRepository) GetAfterSalesAgents(workspaceID string) ([]domain.User, error) {
+	query := `
+		SELECT u.id, u.email, u.full_name, COALESCE(u.avatar_url, '') AS avatar_url, u.is_superadmin, u.created_at, u.updated_at
+		FROM workspace_members wm
+		JOIN users u ON wm.user_id = u.id
+		WHERE wm.workspace_id = $1
+		  AND (wm.department = 'support' OR wm.department = 'cs' OR wm.role = 'owner')
+		ORDER BY wm.joined_at ASC
+	`
+	var agents []domain.User
+	err := r.db.Select(&agents, query, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	return agents, nil
+}
+
+// GetCSActiveTicketCounts counts active tickets per assigned CS user
+func (r *TicketRepository) GetCSActiveTicketCounts(workspaceID string) (map[string]int, error) {
+	query := `
+		SELECT assigned_to_id, COUNT(*) 
+		FROM tickets
+		WHERE workspace_id = $1 AND status IN ('open', 'in_progress', 'escalated')
+		  AND assigned_to_id IS NOT NULL
+		GROUP BY assigned_to_id
+	`
+	rows, err := r.db.Query(query, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	counts := make(map[string]int)
+	for rows.Next() {
+		var uid string
+		var c int
+		if err := rows.Scan(&uid, &c); err == nil {
+			counts[uid] = c
+		}
+	}
+	return counts, nil
+}

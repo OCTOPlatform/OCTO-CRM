@@ -945,18 +945,51 @@ func (h *InboxHandler) ReceiveWhatsAppWebhook(c *gin.Context) {
 		}
 	}
 
-	if !strings.HasPrefix(cleanPhone, "+") {
-		cleanPhone = "+" + cleanPhone
+	cleanPhone = "+" + strings.TrimLeft(cleanPhone, "+")
+
+	// Determine sessionName early so we can query WAHA contact profile if needed
+	sessionName := "default"
+	if s, ok := rawMap["session"].(string); ok && s != "" {
+		sessionName = s
+	}
+
+	// If senderName is empty, phone number, or placeholder, fetch from WAHA contact profile API
+	if senderName == "" || senderName == senderPhone || strings.HasPrefix(senderName, "+") || strings.EqualFold(senderName, "test") || strings.EqualFold(senderName, "tester") {
+		wahaURL := h.cfg.WhatsAppGatewayURL
+		if wahaURL == "" {
+			wahaURL = "http://localhost:3005"
+		}
+		wahaURL = strings.TrimRight(wahaURL, "/")
+		phoneDigits := repository.NormalizePhone(senderPhone)
+		reqContact, errReq := http.NewRequest("GET", fmt.Sprintf("%s/api/contacts?contactId=%s@c.us&session=%s", wahaURL, phoneDigits, sessionName), nil)
+		if errReq == nil {
+			if h.cfg.WhatsAppToken != "" {
+				reqContact.Header.Set("X-Api-Key", h.cfg.WhatsAppToken)
+			}
+			client := &http.Client{Timeout: 2 * time.Second}
+			respContact, errDo := client.Do(reqContact)
+			if errDo == nil && respContact.StatusCode == http.StatusOK {
+				var contactData struct {
+					Name     string `json:"name"`
+					Pushname string `json:"pushname"`
+					PushName string `json:"pushName"`
+				}
+				if json.NewDecoder(respContact.Body).Decode(&contactData) == nil {
+					if strings.TrimSpace(contactData.Pushname) != "" {
+						senderName = strings.TrimSpace(contactData.Pushname)
+					} else if strings.TrimSpace(contactData.PushName) != "" {
+						senderName = strings.TrimSpace(contactData.PushName)
+					} else if strings.TrimSpace(contactData.Name) != "" {
+						senderName = strings.TrimSpace(contactData.Name)
+					}
+				}
+				respContact.Body.Close()
+			}
+		}
 	}
 
 	if senderName == "" || senderName == senderPhone {
 		senderName = cleanPhone
-	}
-
-	// Determine channel, department, and assigned user from session
-	sessionName := "default"
-	if s, ok := rawMap["session"].(string); ok && s != "" {
-		sessionName = s
 	}
 
 	var channelID string
@@ -1153,4 +1186,61 @@ func (h *InboxHandler) ListInboxAuditTrail(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, domain.SuccessResponse(trail))
+}
+
+// PublicWebChatSend handles incoming public webchat messages from the website widget (OCTO-WEB)
+func (h *InboxHandler) PublicWebChatSend(c *gin.Context) {
+	workspaceID := c.Param("workspace_id")
+	if workspaceID == "" {
+		c.JSON(http.StatusBadRequest, domain.ErrorResponse("workspace_id wajib disertakan"))
+		return
+	}
+
+	var req domain.PublicWebChatSendRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, domain.ErrorResponse(err.Error()))
+		return
+	}
+
+	incomingReq := domain.IncomingWebhookRequest{
+		Channel:          domain.ChannelWebChat,
+		SenderIdentifier: req.VisitorID,
+		SenderName:       req.Name,
+		Email:            req.Email,
+		Phone:            req.Phone,
+		Content:          req.Message,
+		Department:       "support",
+	}
+
+	msg, err := h.inboxService.HandleIncomingMessage(workspaceID, incomingReq)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, domain.ErrorResponse(err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusCreated, domain.SuccessResponse(gin.H{
+		"conversation_id": msg.ConversationID,
+		"message_id":      msg.ID,
+		"sender_name":     msg.SenderName,
+		"content":         msg.Content,
+		"created_at":      msg.CreatedAt,
+	}, "Pesan webchat berhasil dikirim"))
+}
+
+// PublicWebChatMessages retrieves the chat message history for the visitor
+func (h *InboxHandler) PublicWebChatMessages(c *gin.Context) {
+	workspaceID := c.Param("workspace_id")
+	visitorID := c.Query("visitor_id")
+	if workspaceID == "" || visitorID == "" {
+		c.JSON(http.StatusBadRequest, domain.ErrorResponse("workspace_id dan visitor_id wajib disertakan"))
+		return
+	}
+
+	history, err := h.inboxService.GetPublicWebChatHistory(workspaceID, visitorID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, domain.ErrorResponse(err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, domain.SuccessResponse(history))
 }
