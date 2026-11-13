@@ -1,0 +1,72 @@
+[
+  {
+    "step": "Step 1: Autentikasi Login & Navigasi Dashboard",
+    "status": "PASSED",
+    "duration_ms": 2187.09,
+    "details": "Logged in as budi@octocrm.id",
+    "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/commercial_ops/01_login_dashboard.png"
+  },
+  {
+    "step": "Step 2: Tampilan Katalog Penawaran & Invoice",
+    "status": "PASSED",
+    "duration_ms": 2126.28,
+    "details": "KPI metrics & invoice list rendered",
+    "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/commercial_ops/02_invoices_catalog.png"
+  },
+  {
+    "step": "Step 3: Penerbitan Surat Penawaran Harga (SPH)",
+    "status": "PASSED",
+    "duration_ms": 2764.75,
+    "details": "Quotation generated with 11% PPN and line items",
+    "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/commercial_ops/04_quotation_published.png"
+  },
+  {
+    "step": "Step 4: Penerbitan Invoice Tagihan Resmi",
+    "status": "PASSED",
+    "duration_ms": 2713.99,
+    "details": "Invoice created with dynamic invoice number and payment instructions",
+    "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/commercial_ops/06_invoice_published.png"
+  },
+  {
+    "step": "Step 5: Tampilan Pratinjau & Cetak Invoice Resmi",
+    "status": "PASSED",
+    "duration_ms": 1863.02,
+    "details": "Company header, line items, and payment instructions verified",
+    "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/commercial_ops/07_invoice_print_preview_modal.png"
+  },
+  {
+    "step": "Step 6: Pelunasan QRIS & Otomasi Stok + Deal Won",
+    "status": "PASSED",
+    "duration_ms": 3139.79,
+    "details": "Invoice marked PAID, inventory deducted, and deal closed Won",
+    "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/commercial_ops/09_invoice_paid_success.png"
+  },
+  {
+    "step": "Step 7: Tampilan Katalog Otomasi Follow-up WA",
+    "status": "PASSED",
+    "duration_ms": 2148.61,
+    "details": "Workflows list & trigger cards rendered",
+    "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/commercial_ops/10_automations_catalog.png"
+  },
+  {
+    "step": "Step 8: Pembuatan Alur Kerja Drip WhatsApp Baru",
+    "status": "PASSED",
+    "duration_ms": 2688.67,
+    "details": "Workflow Auto Re-Order Nurturing Q66 created with trigger & action",
+    "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/commercial_ops/12_workflow_created.png"
+  },
+  {
+    "step": "Step 9: Simulasi Eksekusi Alur Kerja Otomasi",
+    "status": "PASSED",
+    "duration_ms": 2779.15,
+    "details": "Triggered action & dispatched to WAHA simulator",
+    "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/commercial_ops/13_workflow_test_runner_modal.png"
+  },
+  {
+    "step": "Step 10: Tampilan Log Audit Eksekusi Otomasi",
+    "status": "PASSED",
+    "duration_ms": 1088.26,
+    "details": "Execution history, target contact, and success status recorded",
+    "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/commercial_ops/14_automation_audit_logs.png"
+  }
+]

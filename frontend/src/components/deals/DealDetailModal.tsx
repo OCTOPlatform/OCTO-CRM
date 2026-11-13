@@ -32,6 +32,7 @@ import {
   CheckCircle2,
   RefreshCw,
   Trash2,
+  Copy,
 } from 'lucide-react';
 
 interface DealDetailModalProps {
@@ -69,6 +70,59 @@ export default function DealDetailModal({
   
   // Chatter active tab: 'note' | 'activity'
   const [chatterTab, setChatterTab] = useState<'note' | 'activity'>('note');
+
+  // OCTO-INSIGHTS Credentials & WA Share State
+  const [copiedInsightsWA, setCopiedInsightsWA] = useState(false);
+
+  const isInsightsDeal = (d: Deal | null) => {
+    if (!d) return false;
+    const t = (d.title || '').toLowerCase();
+    const n = (d.notes || '').toLowerCase();
+    const tagsStr = (d.tags || []).join(' ').toLowerCase();
+    return (
+      t.includes('insights') ||
+      t.includes('insight') ||
+      n.includes('insights') ||
+      tagsStr.includes('insights') ||
+      tagsStr.includes('octo-insights')
+    );
+  };
+
+  const getWhatsAppInsightsTemplate = (d: Deal) => {
+    const clientName = d.contact_name || 'Kak';
+    const wsName = d.company_name || d.title || 'Bisnis Anda';
+    const email = d.contact_email || 'email@klien.com';
+    const password = 'OctoInsights123!';
+    const loginUrl = 'http://localhost:3003/login';
+
+    return `Halo Kak ${clientName},
+
+Selamat! Akun *OCTO Insights* untuk *${wsName}* telah aktif dan siap digunakan.
+
+Berikut adalah kredensial akses Anda:
+🔗 *Link Login:* ${loginUrl}
+📧 *Email Bisnis:* ${email}
+🔑 *Kata Sandi Sementara:* ${password}
+
+Silakan login untuk menghubungkan Google Review dan melihat analisis kepuasan pelanggan bisnis Anda. Jika ada kendala dalam setup, jangan ragu untuk menghubungi kami kembali. Terima kasih! 🙏`;
+  };
+
+  const handleCopyWATemplate = (d: Deal) => {
+    const text = getWhatsAppInsightsTemplate(d);
+    navigator.clipboard.writeText(text);
+    setCopiedInsightsWA(true);
+    setTimeout(() => setCopiedInsightsWA(false), 3000);
+  };
+
+  const getDirectWALink = (d: Deal) => {
+    const text = encodeURIComponent(getWhatsAppInsightsTemplate(d));
+    let phone = d.contact_phone ? d.contact_phone.replace(/[^0-9]/g, '') : '';
+    if (phone.startsWith('0')) {
+      phone = '62' + phone.substring(1);
+    }
+    return phone ? `https://wa.me/${phone}?text=${text}` : `https://wa.me/?text=${text}`;
+  };
+
   
   // Note Form
   const [noteText, setNoteText] = useState('');
@@ -593,6 +647,86 @@ Jika ada pertanyaan spesifik yang ingin dibahas terlebih dahulu, silakan kabari 
           
           {/* KOLOM KIRI (7/12): DETAIL INFORMASI PELUANG & PROSPEK */}
           <div className="lg:col-span-7 p-6 space-y-6 overflow-y-auto">
+            {/* OCTO-INSIGHTS Credentials & WhatsApp Share Banner for WON Insights Deals */}
+            {deal.status === 'won' && isInsightsDeal(deal) && (
+              <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border-2 border-emerald-300 rounded-2xl p-5 shadow-xs space-y-4 animate-in fade-in">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold shadow-xs text-sm">
+                      OI
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-200/60 px-2 py-0.5 rounded-full">
+                        Prospek OCTO-INSIGHTS Deal Won
+                      </span>
+                      <h4 className="text-sm font-bold text-slate-900 mt-0.5">
+                        Kredensial Login Siap Dibagikan ke Klien
+                      </h4>
+                    </div>
+                  </div>
+                  <span className="text-xs text-emerald-700 font-semibold bg-white px-2.5 py-1 rounded-lg border border-emerald-200 shadow-2xs">
+                    Akun Otomatis Aktif
+                  </span>
+                </div>
+
+                <div className="bg-white/95 backdrop-blur-xs rounded-xl p-3.5 border border-emerald-200/80 text-xs grid grid-cols-1 sm:grid-cols-2 gap-3 text-slate-700">
+                  <div>
+                    <span className="text-slate-400 text-[11px] block">Email Login Klien:</span>
+                    <span className="font-semibold text-slate-900 select-all font-mono">{deal.contact_email || 'Belum diisi'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-[11px] block">Kata Sandi Sementara:</span>
+                    <span className="font-mono font-bold text-emerald-700 select-all">OctoInsights123!</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-[11px] block">Nama Workspace:</span>
+                    <span className="font-semibold text-slate-900">{deal.company_name || deal.title}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-[11px] block">URL Portal Login:</span>
+                    <a
+                      href="http://localhost:3003/login"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-indigo-600 font-semibold hover:underline flex items-center gap-1"
+                    >
+                      http://localhost:3003/login <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2.5 pt-1">
+                  <a
+                    href={getDirectWALink(deal)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    <span>Kirim Kredensial via WhatsApp</span>
+                  </a>
+
+                  <button
+                    type="button"
+                    onClick={() => handleCopyWATemplate(deal)}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold border border-slate-300 shadow-2xs transition"
+                  >
+                    {copiedInsightsWA ? (
+                      <>
+                        <Check className="w-4 h-4 text-emerald-600" />
+                        <span className="text-emerald-700">Template Pesan Tersalin!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4 text-slate-500" />
+                        <span>Salin Template WhatsApp</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Title & Value Summary */}
             <div className="space-y-3">
               {editingTitle ? (

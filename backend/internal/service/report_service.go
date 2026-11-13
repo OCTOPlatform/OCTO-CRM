@@ -29,6 +29,10 @@ func (s *ReportService) GetLeadSources(workspaceID string) ([]domain.LeadSourceR
 	return s.reportRepo.GetLeadSources(workspaceID)
 }
 
+func (s *ReportService) GetLeadSourcesWithFilter(workspaceID string, params domain.ReportFilterParams) ([]domain.LeadSourceReportItem, error) {
+	return s.reportRepo.GetLeadSourcesWithFilter(workspaceID, params)
+}
+
 func (s *ReportService) GetActivitySummary(workspaceID string) ([]domain.ActivitySummaryItem, error) {
 	return s.reportRepo.GetActivitySummary(workspaceID)
 }

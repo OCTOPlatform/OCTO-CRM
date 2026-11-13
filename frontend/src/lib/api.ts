@@ -37,6 +37,17 @@ import {
   NotificationItem,
   NotificationListResponse,
   WorkspaceBotSettings,
+  Product,
+  ProductStockMovement,
+  Attendance,
+  AttendanceSummary,
+  PayrollComponent,
+  PayrollSlip,
+  FormulaSimulationResponse,
+  Invoice,
+  CreateInvoiceRequest,
+  AutomationWorkflow,
+  AutomationLog,
 } from '@/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
@@ -487,8 +498,17 @@ class ApiClient {
     return res ?? [];
   }
 
-  async getLeadSources(wsId: string) {
-    const res = await this.request<LeadSourceItem[]>(`/workspaces/${wsId}/reports/lead-sources`);
+  async getLeadSources(
+    wsId: string,
+    params?: { period?: string; start_date?: string; end_date?: string; compare?: boolean }
+  ) {
+    const query = new URLSearchParams();
+    if (params?.period) query.set('period', params.period);
+    if (params?.start_date) query.set('start_date', params.start_date);
+    if (params?.end_date) query.set('end_date', params.end_date);
+    if (params?.compare !== undefined) query.set('compare', String(params.compare));
+    const qs = query.toString() ? `?${query.toString()}` : '';
+    const res = await this.request<LeadSourceItem[]>(`/workspaces/${wsId}/reports/lead-sources${qs}`);
     return res ?? [];
   }
 
@@ -973,6 +993,192 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify({ conversation_id: conversationId }),
     });
+  }
+
+  // ================= UNIFIED OPERATIONS: INVENTORY, ATTENDANCE & PAYROLL =================
+  // 1. Inventory & Products
+  async listProducts(wsId: string, search?: string, category?: string) {
+    const q = new URLSearchParams();
+    if (search) q.set('search', search);
+    if (category) q.set('category', category);
+    const qs = q.toString() ? `?${q.toString()}` : '';
+    const res = await this.request<Product[]>(`/workspaces/${wsId}/products${qs}`);
+    return res ?? [];
+  }
+
+  async getProduct(wsId: string, prodId: string) {
+    return this.request<Product>(`/workspaces/${wsId}/products/${prodId}`);
+  }
+
+  async createProduct(wsId: string, data: Partial<Product>) {
+    return this.request<Product>(`/workspaces/${wsId}/products`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateProduct(wsId: string, prodId: string, data: Partial<Product>) {
+    return this.request<Product>(`/workspaces/${wsId}/products/${prodId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async adjustStock(wsId: string, prodId: string, quantity: number, type: 'in' | 'out' | 'adjustment', notes?: string) {
+    return this.request<void>(`/workspaces/${wsId}/products/${prodId}/adjust-stock`, {
+      method: 'POST',
+      body: JSON.stringify({ quantity, type, notes: notes || '' }),
+    });
+  }
+
+  async listStockMovements(wsId: string, prodId: string) {
+    const res = await this.request<ProductStockMovement[]>(`/workspaces/${wsId}/products/${prodId}/movements`);
+    return res ?? [];
+  }
+
+  // 2. Workforce Attendance & GPS
+  async checkIn(wsId: string, data: { gps_lat?: number; gps_lng?: number; location_name?: string; notes?: string }) {
+    return this.request<Attendance>(`/workspaces/${wsId}/attendances/check-in`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async checkOut(wsId: string, notes?: string) {
+    return this.request<Attendance>(`/workspaces/${wsId}/attendances/check-out`, {
+      method: 'POST',
+      body: JSON.stringify({ notes: notes || '' }),
+    });
+  }
+
+  async getTodayAttendance(wsId: string) {
+    return this.request<Attendance | null>(`/workspaces/${wsId}/attendances/today`);
+  }
+
+  async listAttendances(wsId: string, month?: string, userId?: string) {
+    const q = new URLSearchParams();
+    if (month) q.set('month', month);
+    if (userId) q.set('user_id', userId);
+    const qs = q.toString() ? `?${q.toString()}` : '';
+    const res = await this.request<Attendance[]>(`/workspaces/${wsId}/attendances${qs}`);
+    return res ?? [];
+  }
+
+  async getAttendanceSummary(wsId: string, month?: string) {
+    const qs = month ? `?month=${month}` : '';
+    return this.request<AttendanceSummary>(`/workspaces/${wsId}/attendances/summary${qs}`);
+  }
+
+  // 3. Dynamic Payroll & Formula Engine
+  async listPayrollComponents(wsId: string) {
+    const res = await this.request<PayrollComponent[]>(`/workspaces/${wsId}/payroll/components`);
+    return res ?? [];
+  }
+
+  async createPayrollComponent(wsId: string, data: Partial<PayrollComponent>) {
+    return this.request<PayrollComponent>(`/workspaces/${wsId}/payroll/components`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updatePayrollComponent(wsId: string, compId: string, data: Partial<PayrollComponent>) {
+    return this.request<PayrollComponent>(`/workspaces/${wsId}/payroll/components/${compId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deletePayrollComponent(wsId: string, compId: string) {
+    return this.request<void>(`/workspaces/${wsId}/payroll/components/${compId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async simulateFormula(wsId: string, formula_expression: string, sample_variables?: Record<string, number>) {
+    return this.request<FormulaSimulationResponse>(`/workspaces/${wsId}/payroll/simulate`, {
+      method: 'POST',
+      body: JSON.stringify({ formula_expression, sample_variables }),
+    });
+  }
+
+  async listPayrollSlips(wsId: string, month?: string) {
+    const qs = month ? `?month=${month}` : '';
+    const res = await this.request<PayrollSlip[]>(`/workspaces/${wsId}/payroll/slips${qs}`);
+    return res ?? [];
+  }
+
+  async generateMonthlyPayrollRun(wsId: string, period_month: string) {
+    return this.request<PayrollSlip[]>(`/workspaces/${wsId}/payroll/generate`, {
+      method: 'POST',
+      body: JSON.stringify({ period_month }),
+    });
+  }
+
+  // ================= Commercial Ops: Invoices, Quotations & Payment Simulation =================
+  async listInvoices(wsId: string, type?: string, status?: string) {
+    const params = new URLSearchParams();
+    if (type && type !== 'all') params.append('type', type);
+    if (status && status !== 'all') params.append('status', status);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    const res = await this.request<Invoice[]>(`/workspaces/${wsId}/invoices${qs}`);
+    return res ?? [];
+  }
+
+  async getInvoice(wsId: string, id: string) {
+    return this.request<Invoice>(`/workspaces/${wsId}/invoices/${id}`);
+  }
+
+  async createInvoice(wsId: string, data: CreateInvoiceRequest) {
+    return this.request<Invoice>(`/workspaces/${wsId}/invoices`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async payInvoice(wsId: string, id: string, data: { payment_method?: string; payment_reference?: string; auto_deduct_stock?: boolean; auto_close_deal?: boolean }) {
+    return this.request<Invoice>(`/workspaces/${wsId}/invoices/${id}/pay`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // ================= WhatsApp Drip Marketing & Automations =================
+  async listDripWorkflows(wsId: string) {
+    const res = await this.request<AutomationWorkflow[]>(`/workspaces/${wsId}/drip-automations`);
+    return res ?? [];
+  }
+
+  async createDripWorkflow(wsId: string, data: Partial<AutomationWorkflow>) {
+    return this.request<AutomationWorkflow>(`/workspaces/${wsId}/drip-automations`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateDripWorkflow(wsId: string, id: string, data: Partial<AutomationWorkflow>) {
+    return this.request<void>(`/workspaces/${wsId}/drip-automations/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteDripWorkflow(wsId: string, id: string) {
+    return this.request<void>(`/workspaces/${wsId}/drip-automations/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async triggerDripWorkflow(wsId: string, id: string, data: { target_type?: string; target_id?: string; target_name?: string }) {
+    return this.request<AutomationLog>(`/workspaces/${wsId}/drip-automations/${id}/trigger`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async listDripLogs(wsId: string, limit: number = 50) {
+    const res = await this.request<AutomationLog[]>(`/workspaces/${wsId}/drip-automations/logs?limit=${limit}`);
+    return res ?? [];
   }
 }
 

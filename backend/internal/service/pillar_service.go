@@ -718,6 +718,74 @@ func (s *PillarService) HandleDealWonHandover(workspaceID string, deal *domain.D
 		Description: fmt.Sprintf("Auto-created handover ticket %s for won deal %s", ticket.TicketNumber, deal.Title),
 	})
 
+	// Filter: Hanya provisikan jika peluang / prospek terkait OCTO-INSIGHTS
+	titleLower := strings.ToLower(deal.Title)
+	notesLower := strings.ToLower(deal.Notes)
+	tagsStr := strings.ToLower(strings.Join(deal.Tags, " "))
+	isInsightsProspect := strings.Contains(titleLower, "insight") ||
+		strings.Contains(notesLower, "insight") ||
+		strings.Contains(tagsStr, "insight")
+
+	if contactEmail != "" && isInsightsProspect {
+		wsName := clientName
+		if deal.CompanyName != nil && *deal.CompanyName != "" {
+			wsName = *deal.CompanyName
+		}
+
+		go func(cEmail, cName, wName, dID, tID string, cID *string) {
+			insightsURL := "http://localhost:8082/api/v1/workspaces/provision"
+			payload := map[string]string{
+				"client_email":   cEmail,
+				"client_name":    cName,
+				"workspace_name": wName,
+				"plan_tier":      "Enterprise",
+				"octo_tap_id":    "",
+				"crm_deal_id":    dID,
+			}
+			bodyJSON, _ := json.Marshal(payload)
+			httpClient := &http.Client{Timeout: 5 * time.Second}
+			resp, err := httpClient.Post(insightsURL, "application/json", bytes.NewBuffer(bodyJSON))
+			if err != nil {
+				log.Printf("[OCTO-INSIGHTS Provision] Error connecting to insights: %v", err)
+				return
+			}
+			defer resp.Body.Close()
+
+			if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusCreated {
+				log.Printf("[OCTO-INSIGHTS Provision] Successfully auto-provisioned workspace for %s", cEmail)
+				
+				waTemplate := fmt.Sprintf(
+					"🎉 [OCTO-INSIGHTS Kredensial Onboarding Klien]\n\n"+
+						"Halo Kak %s,\n"+
+						"Selamat! Akun OCTO Insights untuk %s telah aktif dan siap digunakan.\n\n"+
+						"Berikut kredensial login Anda:\n"+
+						"🔗 Link Login: http://localhost:3003/login\n"+
+						"📧 Email: %s\n"+
+						"🔑 Kata Sandi: OctoInsights123!\n\n"+
+						"Silakan login untuk menghubungkan Google Review dan melihat analisis kepuasan pelanggan bisnis Anda. Jika ada kendala, hubungi kami kembali.",
+					cName, wName, cEmail,
+				)
+
+				_ = s.ticketRepo.AddTicketActivity(&domain.TicketActivity{
+					TicketID:     tID,
+					ActivityType: "note",
+					Note:         waTemplate,
+				})
+
+				if cID != nil && *cID != "" && s.activityRepo != nil {
+					_ = s.activityRepo.CreateActivity(&domain.Activity{
+						WorkspaceID: workspaceID,
+						ContactID:   *cID,
+						DealID:      &dID,
+						Type:        "note",
+						Subject:     "Kredensial Akses OCTO-INSIGHTS Klien",
+						Description: waTemplate,
+					})
+				}
+			}
+		}(contactEmail, clientName, wsName, deal.ID, ticket.ID, deal.ContactID)
+	}
+
 	return ticket, nil
 }
 

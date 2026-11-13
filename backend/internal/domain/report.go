@@ -19,9 +19,21 @@ type StageFunnelItem struct {
 }
 
 type LeadSourceReportItem struct {
-	LeadSource string  `json:"lead_source" db:"lead_source"`
-	Count      int     `json:"count" db:"count"`
-	TotalValue float64 `json:"total_value" db:"total_value"`
+	LeadSource     string  `json:"lead_source" db:"lead_source"`
+	Count          int     `json:"count" db:"count"`
+	TotalDeals     int     `json:"total_deals" db:"total_deals"`
+	WonDeals       int     `json:"won_deals" db:"won_deals"`
+	TotalValue     float64 `json:"total_value" db:"total_value"`
+	ConversionRate float64 `json:"conversion_rate" db:"conversion_rate"`
+	PreviousCount  int     `json:"previous_count" db:"previous_count"`
+	GrowthPct      float64 `json:"growth_pct" db:"growth_pct"`
+}
+
+type ReportFilterParams struct {
+	Period    string `form:"period"`     // "7d", "30d", "custom", "all"
+	StartDate string `form:"start_date"` // YYYY-MM-DD
+	EndDate   string `form:"end_date"`   // YYYY-MM-DD
+	Compare   bool   `form:"compare"`
 }
 
 type ActivitySummaryItem struct {

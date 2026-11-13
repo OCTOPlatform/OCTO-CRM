@@ -324,7 +324,7 @@ export default function PipelinePage() {
   if (loading) {
     return (
       <div className="flex-1 flex flex-col">
-        <Navbar title="Sales Pipeline & Kanban (Odoo Style)" />
+        <Navbar title="Sales Pipeline" />
         <div className="p-8 flex items-center justify-center flex-1">
           <div className="w-8 h-8 border-3 border-[#00AFC4] border-t-transparent rounded-full animate-spin"></div>
         </div>
@@ -347,17 +347,29 @@ export default function PipelinePage() {
   return (
     <div className="flex-1 flex flex-col h-screen overflow-hidden bg-[#F8FAFC]">
       <Navbar
-        title="Sales Pipeline (Odoo CRM)"
+        title="Sales Pipeline"
         subtitle={`Pipeline: ${pipeline?.name || 'Utama'} • ${filteredDeals.length} Peluang`}
         onQuickAddDeal={() => setShowAddDealModal(true)}
-      />
+      >
+        {/* Revenue KPI Pills - Locked in Navbar Header */}
+        <div className="hidden lg:flex items-center gap-2 mr-1">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200/80 text-xs">
+            <span className="text-slate-500 font-medium text-[11px]">Nilai Terbuka:</span>
+            <span className="font-bold text-slate-800">{formatCurrencyIDR(totalOpenValue)}</span>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200/80 text-xs">
+            <span className="text-emerald-700 font-medium text-[11px]">Estimasi Prorata:</span>
+            <span className="font-bold text-emerald-700">{formatCurrencyIDR(Math.round(totalProratedValue))}</span>
+          </div>
+        </div>
+      </Navbar>
 
-      {/* ================= ODOO CRM CONTROL PANEL / SEARCH & VIEW SWITCHER ================= */}
-      <div className="bg-white border-b border-slate-200 px-6 py-3 shrink-0 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-2xs">
-        {/* Left: Search & Filter Tag Buttons */}
-        <div className="flex items-center flex-wrap gap-2 flex-1">
-          {/* Search Bar */}
-          <div className="relative min-w-[220px] max-w-xs flex-1">
+      {/* ================= PIPELINE CONTROL PANEL / SEARCH & FILTER BAR ================= */}
+      <div className="bg-white border-b border-slate-200 px-6 py-2.5 shrink-0 flex items-center justify-between gap-4 shadow-2xs">
+        {/* Left: Fixed Search & Horizontal Scrolling Filter Chips (No Wrap, No Layout Shift) */}
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          {/* Search Bar - Fixed Width, Non-Shrinking */}
+          <div className="relative w-60 shrink-0">
             <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
             <input
               type="text"
@@ -368,13 +380,13 @@ export default function PipelinePage() {
             />
           </div>
 
-          <div className="h-5 w-px bg-slate-200 mx-1 hidden sm:block"></div>
+          <div className="h-5 w-px bg-slate-200 shrink-0 hidden sm:block"></div>
 
-          {/* Odoo Filter Chips */}
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+          {/* Filter Chips - Smooth Horizontal Row with Shrink-0 items */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 min-w-0">
             <button
               onClick={() => setActiveFilter('all')}
-              className={`px-2.5 py-1 rounded-md text-xs font-semibold transition cursor-pointer ${
+              className={`px-2.5 py-1 rounded-md text-xs font-semibold transition shrink-0 cursor-pointer ${
                 activeFilter === 'all'
                   ? 'bg-slate-900 text-white shadow-xs'
                   : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
@@ -385,7 +397,7 @@ export default function PipelinePage() {
 
             <button
               onClick={() => setActiveFilter('high_priority')}
-              className={`px-2.5 py-1 rounded-md text-xs font-semibold transition flex items-center gap-1 cursor-pointer ${
+              className={`px-2.5 py-1 rounded-md text-xs font-semibold transition flex items-center gap-1 shrink-0 cursor-pointer ${
                 activeFilter === 'high_priority'
                   ? 'bg-amber-500 text-white shadow-xs'
                   : 'bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200'
@@ -397,7 +409,7 @@ export default function PipelinePage() {
 
             <button
               onClick={() => setActiveFilter('overdue')}
-              className={`px-2.5 py-1 rounded-md text-xs font-semibold transition flex items-center gap-1 cursor-pointer ${
+              className={`px-2.5 py-1 rounded-md text-xs font-semibold transition flex items-center gap-1 shrink-0 cursor-pointer ${
                 activeFilter === 'overdue'
                   ? 'bg-rose-600 text-white shadow-xs'
                   : 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200'
@@ -409,7 +421,7 @@ export default function PipelinePage() {
 
             <button
               onClick={() => setActiveFilter('today')}
-              className={`px-2.5 py-1 rounded-md text-xs font-semibold transition flex items-center gap-1 cursor-pointer ${
+              className={`px-2.5 py-1 rounded-md text-xs font-semibold transition flex items-center gap-1 shrink-0 cursor-pointer ${
                 activeFilter === 'today'
                   ? 'bg-amber-600 text-white shadow-xs'
                   : 'bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200'
@@ -421,7 +433,7 @@ export default function PipelinePage() {
 
             <button
               onClick={() => setActiveFilter('my_deals')}
-              className={`px-2.5 py-1 rounded-md text-xs font-semibold transition flex items-center gap-1 cursor-pointer ${
+              className={`px-2.5 py-1 rounded-md text-xs font-semibold transition flex items-center gap-1 shrink-0 cursor-pointer ${
                 activeFilter === 'my_deals'
                   ? 'bg-indigo-600 text-white shadow-xs'
                   : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200'
@@ -433,7 +445,7 @@ export default function PipelinePage() {
 
             <button
               onClick={() => setActiveFilter('won')}
-              className={`px-2.5 py-1 rounded-md text-xs font-semibold transition flex items-center gap-1 cursor-pointer ${
+              className={`px-2.5 py-1 rounded-md text-xs font-semibold transition flex items-center gap-1 shrink-0 cursor-pointer ${
                 activeFilter === 'won'
                   ? 'bg-emerald-600 text-white shadow-xs'
                   : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200'
@@ -445,20 +457,9 @@ export default function PipelinePage() {
           </div>
         </div>
 
-        {/* Right: Revenue Summary & View Switcher */}
-        <div className="flex items-center gap-4 shrink-0">
-          <div className="hidden lg:flex items-center gap-3 text-xs pr-2 border-r border-slate-200">
-            <div>
-              <span className="text-slate-400 block text-[10px]">Nilai Terbuka:</span>
-              <span className="font-bold text-slate-800">{formatCurrencyIDR(totalOpenValue)}</span>
-            </div>
-            <div>
-              <span className="text-slate-400 block text-[10px]">Estimasi Prorata:</span>
-              <span className="font-bold text-emerald-700">{formatCurrencyIDR(Math.round(totalProratedValue))}</span>
-            </div>
-          </div>
-
-          {/* Odoo View Mode Switcher: Kanban vs List */}
+        {/* Right: View Switcher & Quick Add Button */}
+        <div className="flex items-center gap-3 shrink-0">
+          {/* View Mode Switcher: Kanban vs List */}
           <div className="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200">
             <button
               onClick={() => setViewMode('kanban')}
@@ -693,6 +694,30 @@ export default function PipelinePage() {
                           <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-0.5">
                             <Building className="w-3 h-3 text-slate-400 shrink-0" />
                             <span className="truncate">{deal.company_name}</span>
+                          </div>
+                        )}
+
+                        {/* Lead Source / Attribution Tags */}
+                        {deal.tags && deal.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1.5">
+                            {deal.tags.slice(0, 2).map((t, tidx) => (
+                              <span
+                                key={tidx}
+                                className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                                  t.toLowerCase().includes('meta') || t.toLowerCase().includes('instagram')
+                                    ? 'bg-pink-50 text-pink-700 border border-pink-200'
+                                    : t.toLowerCase().includes('google')
+                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                    : t.toLowerCase().includes('tiktok')
+                                    ? 'bg-slate-900 text-white'
+                                    : t.toLowerCase().includes('tap')
+                                    ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                    : 'bg-slate-100 text-slate-600'
+                                }`}
+                              >
+                                {t}
+                              </span>
+                            ))}
                           </div>
                         )}
 
@@ -1045,7 +1070,7 @@ export default function PipelinePage() {
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Prioritas (Odoo Stars)
+                    Prioritas
                   </label>
                   <select
                     value={dealPriority}

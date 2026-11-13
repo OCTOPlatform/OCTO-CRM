@@ -238,12 +238,114 @@ export interface StageFunnelItem {
 export interface LeadSourceItem {
   lead_source: string;
   count: number;
+  total_deals?: number;
+  won_deals?: number;
   total_value: number;
+  conversion_rate?: number;
+  previous_count?: number;
+  growth_pct?: number;
 }
 
 export interface ActivitySummaryItem {
   type: string;
   count: number;
+}
+
+// ================= UNIFIED OPERATIONS: INVENTORY, ATTENDANCE & PAYROLL =================
+
+export interface Product {
+  id: string;
+  workspace_id: string;
+  sku: string;
+  name: string;
+  category: string;
+  description: string;
+  cost_price: number;
+  sale_price: number;
+  stock_quantity: number;
+  min_stock_alert: number;
+  unit: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProductStockMovement {
+  id: string;
+  workspace_id: string;
+  product_id: string;
+  product_name?: string;
+  product_sku?: string;
+  deal_id?: string;
+  type: string;
+  quantity: number;
+  notes: string;
+  created_by?: string;
+  created_at: string;
+}
+
+export interface Attendance {
+  id: string;
+  workspace_id: string;
+  user_id: string;
+  user_name?: string;
+  user_email?: string;
+  date: string;
+  check_in?: string;
+  check_out?: string;
+  gps_lat?: number;
+  gps_lng?: number;
+  location_name: string;
+  status: 'present' | 'late' | 'absent' | 'on_leave';
+  overtime_hours: number;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AttendanceSummary {
+  total_days_present: number;
+  total_late_count: number;
+  total_overtime: number;
+  total_absent: number;
+}
+
+export interface PayrollComponent {
+  id: string;
+  workspace_id: string;
+  name: string;
+  code: string;
+  type: 'allowance' | 'deduction' | 'commission' | 'tax';
+  formula_expression: string;
+  description: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PayrollSlip {
+  id: string;
+  workspace_id: string;
+  user_id: string;
+  user_name?: string;
+  user_email?: string;
+  period_month: string;
+  base_salary: number;
+  total_allowances: number;
+  total_deductions: number;
+  total_commissions: number;
+  net_salary: number;
+  status: 'draft' | 'approved' | 'paid';
+  calculation_breakdown: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FormulaSimulationResponse {
+  formula_expression: string;
+  evaluated_result: number;
+  variables_used: Record<string, number>;
+  error?: string;
 }
 
 export interface AuditEvent {
@@ -373,7 +475,7 @@ export interface NotificationListResponse {
 export interface ChatMessage {
   id: string;
   conversation_id: string;
-  sender_type: 'customer' | 'agent';
+  sender_type: 'customer' | 'agent' | 'bot' | string;
   sender_id?: string;
   sender_name: string;
   content: string;
@@ -665,5 +767,102 @@ export interface WorkspaceBotSettings {
   created_at: string;
   updated_at: string;
 }
+
+// Commercial Ops: Invoices, Quotations, Payments & Drip Automations
+export interface InvoiceItem {
+  id?: string;
+  invoice_id?: string;
+  product_id?: string;
+  item_name: string;
+  sku?: string;
+  quantity: number;
+  unit_price: number;
+  discount: number;
+  total_price: number;
+  created_at?: string;
+}
+
+export interface Invoice {
+  id: string;
+  workspace_id: string;
+  deal_id?: string;
+  contact_id?: string;
+  company_id?: string;
+  invoice_number: string;
+  issue_date: string;
+  due_date: string;
+  type: 'quotation' | 'invoice';
+  status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
+  subtotal: number;
+  tax_amount: number;
+  discount_amount: number;
+  total_amount: number;
+  notes?: string;
+  terms?: string;
+  payment_method?: string;
+  payment_reference?: string;
+  paid_at?: string;
+  created_at: string;
+  updated_at: string;
+  items?: InvoiceItem[];
+  contact_name?: string;
+  contact_phone?: string;
+  company_name?: string;
+  deal_title?: string;
+}
+
+export interface CreateInvoiceRequest {
+  deal_id?: string;
+  contact_id?: string;
+  company_id?: string;
+  invoice_number?: string;
+  issue_date?: string;
+  due_date?: string;
+  type: 'quotation' | 'invoice';
+  notes?: string;
+  terms?: string;
+  payment_method?: string;
+  discount_amount?: number;
+  tax_amount?: number;
+  items: {
+    product_id?: string;
+    item_name: string;
+    sku?: string;
+    quantity: number;
+    unit_price: number;
+    discount: number;
+    total_price: number;
+  }[];
+}
+
+export interface AutomationWorkflow {
+  id: string;
+  workspace_id: string;
+  name: string;
+  description?: string;
+  trigger_type: string;
+  trigger_config: Record<string, any>;
+  action_type: string;
+  action_config: Record<string, any>;
+  is_active: boolean;
+  execution_count: number;
+  last_triggered_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AutomationLog {
+  id: string;
+  workflow_id: string;
+  workspace_id: string;
+  workflow_name?: string;
+  target_type: string;
+  target_id: string;
+  target_name?: string;
+  status: 'success' | 'failed';
+  action_details: string;
+  created_at: string;
+}
+
 
 

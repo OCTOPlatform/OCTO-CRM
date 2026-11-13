@@ -260,15 +260,17 @@ export default function TodayTasksPage() {
 
                 <div className="flex items-center gap-2 shrink-0">
                   <span
-                    className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded ${
+                    className={`text-[10px] uppercase font-bold px-2.5 py-1 rounded-full border ${
                       task.priority === 'urgent'
-                        ? 'bg-red-100 text-red-700'
+                        ? 'bg-rose-50 text-rose-700 border-rose-200 animate-pulse'
                         : task.priority === 'high'
-                        ? 'bg-amber-100 text-amber-700'
-                        : 'bg-slate-100 text-slate-600'
+                        ? 'bg-amber-50 text-amber-700 border-amber-200'
+                        : task.priority === 'medium'
+                        ? 'bg-blue-50 text-blue-700 border-blue-200'
+                        : 'bg-slate-50 text-slate-600 border-slate-200'
                     }`}
                   >
-                    {task.priority}
+                    {task.priority === 'urgent' ? '🔥 Mendesak' : task.priority === 'high' ? '⭐ Tinggi' : task.priority}
                   </span>
                 </div>
               </div>

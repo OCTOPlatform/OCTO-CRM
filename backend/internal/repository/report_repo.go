@@ -1,6 +1,10 @@
 package repository
 
 import (
+	"fmt"
+	"strings"
+	"time"
+
 	"octo-crm/backend/internal/domain"
 
 	"github.com/jmoiron/sqlx"
@@ -101,18 +105,93 @@ func (r *ReportRepository) GetPipelineFunnel(workspaceID string) ([]domain.Stage
 }
 
 func (r *ReportRepository) GetLeadSources(workspaceID string) ([]domain.LeadSourceReportItem, error) {
-	query := `
+	return r.GetLeadSourcesWithFilter(workspaceID, domain.ReportFilterParams{Period: "30d"})
+}
+
+func (r *ReportRepository) GetLeadSourcesWithFilter(workspaceID string, params domain.ReportFilterParams) ([]domain.LeadSourceReportItem, error) {
+	var currentStart, currentEnd, prevStart, prevEnd *time.Time
+	now := time.Now()
+
+	period := strings.ToLower(strings.TrimSpace(params.Period))
+	if period == "" {
+		period = "30d"
+	}
+
+	switch period {
+	case "7d":
+		cs := now.AddDate(0, 0, -7)
+		ce := now
+		ps := now.AddDate(0, 0, -14)
+		pe := cs
+		currentStart, currentEnd, prevStart, prevEnd = &cs, &ce, &ps, &pe
+	case "30d":
+		cs := now.AddDate(0, 0, -30)
+		ce := now
+		ps := now.AddDate(0, 0, -60)
+		pe := cs
+		currentStart, currentEnd, prevStart, prevEnd = &cs, &ce, &ps, &pe
+	case "custom":
+		if params.StartDate != "" && params.EndDate != "" {
+			s, err1 := time.Parse("2006-01-02", params.StartDate)
+			e, err2 := time.Parse("2006-01-02", params.EndDate)
+			if err1 == nil && err2 == nil {
+				e = e.Add(23*time.Hour + 59*time.Minute + 59*time.Second)
+				duration := e.Sub(s)
+				ps := s.Add(-duration)
+				pe := s
+				currentStart, currentEnd, prevStart, prevEnd = &s, &e, &ps, &pe
+			}
+		}
+	case "all":
+		// No date filters
+	}
+
+	args := []interface{}{workspaceID}
+	prevFilter := "1 = 0"
+	if prevStart != nil && prevEnd != nil {
+		args = append(args, *prevStart, *prevEnd)
+		prevFilter = fmt.Sprintf("created_at >= $%d AND created_at <= $%d", len(args)-1, len(args))
+	}
+
+	currFilter := ""
+	if currentStart != nil && currentEnd != nil {
+		args = append(args, *currentStart, *currentEnd)
+		currFilter = fmt.Sprintf("AND c.created_at >= $%d AND c.created_at <= $%d", len(args)-1, len(args))
+	}
+
+	query := fmt.Sprintf(`
 		SELECT 
-			COALESCE(NULLIF(lead_source, ''), 'Unspecified') AS lead_source,
-			COUNT(id) AS count,
-			0.0 AS total_value
-		FROM contacts
-		WHERE workspace_id = $1 AND is_archived = false
-		GROUP BY lead_source
+			COALESCE(NULLIF(c.lead_source, ''), 'Unspecified') AS lead_source,
+			COUNT(DISTINCT c.id) AS count,
+			COUNT(DISTINCT d.id) AS total_deals,
+			COUNT(DISTINCT CASE WHEN d.status = 'won' THEN d.id END) AS won_deals,
+			COALESCE(SUM(CASE WHEN d.status = 'won' THEN d.value ELSE 0 END), 0.0) AS total_value,
+			CASE 
+				WHEN COUNT(DISTINCT d.id) > 0 THEN 
+					ROUND((COUNT(DISTINCT CASE WHEN d.status = 'won' THEN d.id END)::numeric / COUNT(DISTINCT d.id)::numeric) * 100.0, 1)
+				ELSE 0.0 
+			END AS conversion_rate,
+			COALESCE(prev.prev_count, 0) AS previous_count,
+			CASE 
+				WHEN COALESCE(prev.prev_count, 0) > 0 THEN
+					ROUND(((COUNT(DISTINCT c.id) - prev.prev_count)::numeric / prev.prev_count::numeric) * 100.0, 1)
+				ELSE 0.0
+			END AS growth_pct
+		FROM contacts c
+		LEFT JOIN deals d ON d.contact_id = c.id AND d.workspace_id = c.workspace_id
+		LEFT JOIN (
+			SELECT COALESCE(NULLIF(lead_source, ''), 'Unspecified') AS ls, COUNT(id) AS prev_count
+			FROM contacts
+			WHERE workspace_id = $1 AND is_archived = false AND %s
+			GROUP BY ls
+		) prev ON prev.ls = COALESCE(NULLIF(c.lead_source, ''), 'Unspecified')
+		WHERE c.workspace_id = $1 AND c.is_archived = false %s
+		GROUP BY c.lead_source, prev.prev_count
 		ORDER BY count DESC
-	`
+	`, prevFilter, currFilter)
+
 	var items []domain.LeadSourceReportItem
-	err := r.db.Select(&items, query, workspaceID)
+	err := r.db.Select(&items, query, args...)
 	if items == nil {
 		items = []domain.LeadSourceReportItem{}
 	}

@@ -61,23 +61,39 @@ func (s *IntegrationService) IngestLead(workspaceID, currentUserID string, req d
 	}
 
 	// 3. Lead Source & Tags
-	leadSource := "Website Demo"
-	if req.UTMSource != "" {
-		leadSource = req.UTMSource
-	}
-	if strings.Contains(strings.ToLower(req.FormType), "tap") || strings.Contains(strings.ToLower(req.ProductInterest), "tap") {
+	leadSource := "Website Form"
+	if strings.TrimSpace(req.LeadSource) != "" {
+		leadSource = strings.TrimSpace(req.LeadSource)
+	} else if strings.TrimSpace(req.UTMSource) != "" {
+		u := strings.ToLower(strings.TrimSpace(req.UTMSource))
+		if strings.Contains(u, "ig") || strings.Contains(u, "instagram") {
+			leadSource = "Meta Ads (Instagram)"
+		} else if strings.Contains(u, "fb") || strings.Contains(u, "facebook") || strings.Contains(u, "meta") {
+			leadSource = "Meta Ads (Facebook)"
+		} else if strings.Contains(u, "google") || strings.Contains(u, "gads") {
+			leadSource = "Google Ads"
+		} else if strings.Contains(u, "tiktok") {
+			leadSource = "TikTok Ads"
+		} else if strings.Contains(u, "wa") || strings.Contains(u, "whatsapp") || strings.Contains(u, "ctwa") {
+			leadSource = "WhatsApp CTWA"
+		} else {
+			leadSource = req.UTMSource
+		}
+	} else if strings.Contains(strings.ToLower(req.FormType), "tap") || strings.Contains(strings.ToLower(req.ProductInterest), "tap") {
 		leadSource = "OCTO Tap"
+	} else if req.FormType != "" {
+		leadSource = req.FormType
 	}
 
 	tags := []string{"Lead Intake"}
-	if req.FormType != "" {
-		tags = append(tags, req.FormType)
+	if leadSource != "" {
+		tags = append(tags, leadSource)
 	}
 	if req.ProductInterest != "" {
 		tags = append(tags, req.ProductInterest)
 	}
-	if req.UTMSource != "" {
-		tags = append(tags, req.UTMSource)
+	if req.UTMCampaign != "" {
+		tags = append(tags, "Campaign:"+req.UTMCampaign)
 	}
 
 	consentStatus := "pending"
@@ -98,8 +114,29 @@ func (s *IntegrationService) IngestLead(workspaceID, currentUserID string, req d
 	if req.Location != "" {
 		customData["location"] = req.Location
 	}
+	if req.UTMSource != "" {
+		customData["utm_source"] = req.UTMSource
+	}
+	if req.UTMMedium != "" {
+		customData["utm_medium"] = req.UTMMedium
+	}
 	if req.UTMCampaign != "" {
 		customData["utm_campaign"] = req.UTMCampaign
+	}
+	if req.UTMContent != "" {
+		customData["utm_content"] = req.UTMContent
+	}
+	if req.UTMTerm != "" {
+		customData["utm_term"] = req.UTMTerm
+	}
+	if req.Platform != "" {
+		customData["platform"] = req.Platform
+	}
+	if req.AdID != "" {
+		customData["ad_id"] = req.AdID
+	}
+	if req.FormID != "" {
+		customData["form_id"] = req.FormID
 	}
 	customBytes, _ := json.Marshal(customData)
 

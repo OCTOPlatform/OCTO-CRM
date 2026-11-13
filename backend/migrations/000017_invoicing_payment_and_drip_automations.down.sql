@@ -1,0 +1,4 @@
+DROP TABLE IF EXISTS automation_logs CASCADE;
+DROP TABLE IF EXISTS automation_workflows CASCADE;
+DROP TABLE IF EXISTS invoice_items CASCADE;
+DROP TABLE IF EXISTS invoices CASCADE;

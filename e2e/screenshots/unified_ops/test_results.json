@@ -1,0 +1,72 @@
+[
+  {
+    "step": "Step 1: Autentikasi Login & Navigasi Dashboard",
+    "status": "PASSED",
+    "duration_ms": 2481.8,
+    "details": "Logged in as budi@octocrm.id",
+    "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/unified_ops/01_login_success.png"
+  },
+  {
+    "step": "Step 2A: Tampilan Katalog Inventori & KPI Aset",
+    "status": "PASSED",
+    "duration_ms": 2192.73,
+    "details": "Inventory catalog rendered with KPI cards",
+    "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/unified_ops/02_inventory_catalog_list.png"
+  },
+  {
+    "step": "Step 2B: Tambah Master SKU Baru & Verifikasi Margin",
+    "status": "PASSED",
+    "duration_ms": 2570.2,
+    "details": "SKU OCTO-DEV-1492 added with calculated gross margin",
+    "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/unified_ops/04_inventory_product_added.png"
+  },
+  {
+    "step": "Step 2C: Penyesuaian Stok Barang & Audit Log Mutasi",
+    "status": "PASSED",
+    "duration_ms": 3455.13,
+    "details": "Stock in +15 logged with audit note",
+    "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/unified_ops/06_inventory_stock_movements.png"
+  },
+  {
+    "step": "Step 3A: Tampilan Halaman Presensi & Geolocation GPS",
+    "status": "PASSED",
+    "duration_ms": 2096.05,
+    "details": "Live clock & GPS coordinates detected",
+    "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/unified_ops/07_attendance_ready_to_checkin.png"
+  },
+  {
+    "step": "Step 3C: Eksekusi Check-Out Presensi",
+    "status": "PASSED",
+    "duration_ms": 1.2,
+    "details": "Attendance workflow active for today",
+    "screenshot": ""
+  },
+  {
+    "step": "Step 4A: Tab Formula Builder & Katalog Aturan Rumus",
+    "status": "PASSED",
+    "duration_ms": 2866.37,
+    "details": "Variable dictionary & active formulas visible",
+    "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/unified_ops/10_formula_builder_tab.png"
+  },
+  {
+    "step": "Step 4B: Live Formula Simulator Sandbox & Save Rule",
+    "status": "PASSED",
+    "duration_ms": 2957.51,
+    "details": "Evaluated arithmetic expression and saved dynamic rule",
+    "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/unified_ops/11_formula_simulator_tested.png"
+  },
+  {
+    "step": "Step 5A: Eksekusi Perhitungan Payroll Lintas-Modul",
+    "status": "PASSED",
+    "duration_ms": 4053.16,
+    "details": "Generated payslips linking attendance + CRM won omset",
+    "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/unified_ops/13_payroll_execution_calculated.png"
+  },
+  {
+    "step": "Step 5B: Tampilan Rincian Slip Gaji Karyawan (Breakdown)",
+    "status": "PASSED",
+    "duration_ms": 1198.89,
+    "details": "Itemized allowances, sales commission, tax and net THP visible",
+    "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/unified_ops/14_payroll_slip_breakdown_modal.png"
+  }
+]

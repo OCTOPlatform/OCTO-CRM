@@ -50,6 +50,8 @@ func main() {
 	ticketRepo := repository.NewTicketRepository(db)
 	pillarRepo := repository.NewPillarRepository(db)
 	notificationRepo := repository.NewNotificationRepo(db)
+	unifiedOpsRepo := repository.NewUnifiedOpsRepository(db)
+	commercialOpsRepo := repository.NewCommercialOpsRepository(db)
 
 	// Services
 	authService := service.NewAuthService(userRepo, auditRepo, cfg)
@@ -65,6 +67,8 @@ func main() {
 	pillarService := service.NewPillarService(pillarRepo, contactRepo, ticketRepo, inboxRepo, userRepo, auditRepo, activityRepo, cfg)
 	masterService := service.NewMasterService(userRepo, auditRepo, cfg)
 	notificationService := service.NewNotificationService(notificationRepo)
+	unifiedOpsService := service.NewUnifiedOpsService(unifiedOpsRepo, userRepo, dealRepo)
+	commercialOpsService := service.NewCommercialOpsService(commercialOpsRepo)
 
 	// Wire cross-pillar services
 	dealService.SetPillarService(pillarService)
@@ -90,6 +94,8 @@ func main() {
 	pillarHandler := handler.NewPillarHandler(pillarService)
 	masterHandler := handler.NewMasterHandler(masterService)
 	notificationHandler := handler.NewNotificationHandler(notificationService)
+	unifiedOpsHandler := handler.NewUnifiedOpsHandler(unifiedOpsService)
+	commercialOpsHandler := handler.NewCommercialOpsHandler(commercialOpsService)
 
 	// Setup Gin Engine
 	if cfg.Environment == "production" {
@@ -136,6 +142,16 @@ func main() {
 
 		// Public Inbound Lead Intake Webhook (Ecosystem from OCTO-WEB / OCTO-TAP / Third-Party Forms)
 		api.POST("/workspaces/:workspace_id/integrations/lead-intake", integrationHandler.IngestLead)
+
+		// Public Meta Ads (Facebook & Instagram Lead Generation Instant Forms) Webhooks
+		api.GET("/workspaces/:workspace_id/integrations/meta/webhook", integrationHandler.VerifyMetaWebhook)
+		api.POST("/workspaces/:workspace_id/integrations/meta/webhook", integrationHandler.ReceiveMetaWebhook)
+		api.GET("/webhooks/meta-leads", integrationHandler.VerifyMetaWebhook)
+		api.POST("/webhooks/meta-leads", integrationHandler.ReceiveMetaWebhook)
+
+		// Public TikTok Ads Lead Generation Webhooks
+		api.GET("/workspaces/:workspace_id/integrations/tiktok/webhook", integrationHandler.VerifyTikTokWebhook)
+		api.POST("/workspaces/:workspace_id/integrations/tiktok/webhook", integrationHandler.ReceiveTikTokWebhook)
 
 		// Public WebChat Widget Endpoints (Website Live Chat from OCTO-WEB)
 		api.POST("/workspaces/:workspace_id/inbox/webchat/send", inboxHandler.PublicWebChatSend)
@@ -291,6 +307,46 @@ func main() {
 			// Pilar 5: AI Sales & CS Copilot (Summarize & Smart Replies)
 			wsRoutes.POST("/ai/summarize-chat", pillarHandler.SummarizeChat)
 			wsRoutes.POST("/ai/suggest-replies", pillarHandler.SuggestReplies)
+
+			// ================= UNIFIED OPERATIONS: INVENTORY, ATTENDANCE & PAYROLL =================
+			// 1. Inventory & Products
+			wsRoutes.GET("/products", unifiedOpsHandler.ListProducts)
+			wsRoutes.POST("/products", unifiedOpsHandler.CreateProduct)
+			wsRoutes.GET("/products/:id", unifiedOpsHandler.GetProduct)
+			wsRoutes.PATCH("/products/:id", unifiedOpsHandler.UpdateProduct)
+			wsRoutes.POST("/products/:id/adjust-stock", unifiedOpsHandler.AdjustStock)
+			wsRoutes.GET("/products/:id/movements", unifiedOpsHandler.ListStockMovements)
+
+			// 2. Workforce Attendance & GPS
+			wsRoutes.POST("/attendances/check-in", unifiedOpsHandler.CheckIn)
+			wsRoutes.POST("/attendances/check-out", unifiedOpsHandler.CheckOut)
+			wsRoutes.GET("/attendances/today", unifiedOpsHandler.GetTodayAttendance)
+			wsRoutes.GET("/attendances", unifiedOpsHandler.ListAttendances)
+			wsRoutes.GET("/attendances/summary", unifiedOpsHandler.GetAttendanceSummary)
+
+			// 3. Dynamic Payroll & Formula Engine
+			wsRoutes.GET("/payroll/components", unifiedOpsHandler.ListPayrollComponents)
+			wsRoutes.POST("/payroll/components", unifiedOpsHandler.CreatePayrollComponent)
+			wsRoutes.PATCH("/payroll/components/:id", unifiedOpsHandler.UpdatePayrollComponent)
+			wsRoutes.DELETE("/payroll/components/:id", unifiedOpsHandler.DeletePayrollComponent)
+			wsRoutes.POST("/payroll/simulate", unifiedOpsHandler.SimulateFormula)
+			wsRoutes.GET("/payroll/slips", unifiedOpsHandler.ListPayrollSlips)
+			wsRoutes.POST("/payroll/generate", unifiedOpsHandler.GenerateMonthlyPayrollRun)
+
+			// ================= COMMERCIAL OPS: INVOICES, QUOTATIONS & DRIP AUTOMATIONS =================
+			// 1. Invoices & Quotations & Payment Simulation
+			wsRoutes.GET("/invoices", commercialOpsHandler.ListInvoices)
+			wsRoutes.POST("/invoices", commercialOpsHandler.CreateInvoice)
+			wsRoutes.GET("/invoices/:id", commercialOpsHandler.GetInvoiceByID)
+			wsRoutes.POST("/invoices/:id/pay", commercialOpsHandler.PayInvoice)
+
+			// 2. WhatsApp Drip Marketing & Follow-up Workflows
+			wsRoutes.GET("/drip-automations", commercialOpsHandler.ListWorkflows)
+			wsRoutes.POST("/drip-automations", commercialOpsHandler.CreateWorkflow)
+			wsRoutes.PUT("/drip-automations/:id", commercialOpsHandler.UpdateWorkflow)
+			wsRoutes.DELETE("/drip-automations/:id", commercialOpsHandler.DeleteWorkflow)
+			wsRoutes.POST("/drip-automations/:id/trigger", commercialOpsHandler.TriggerWorkflow)
+			wsRoutes.GET("/drip-automations/logs", commercialOpsHandler.ListAutomationLogs)
 		}
 
 		// 4. Platform Master Admin routes (Requires Super Admin)

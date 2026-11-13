@@ -40,7 +40,15 @@ func (h *ReportHandler) GetPipelineFunnel(c *gin.Context) {
 
 func (h *ReportHandler) GetLeadSources(c *gin.Context) {
 	workspaceID := c.GetString("workspaceID")
-	sources, err := h.reportService.GetLeadSources(workspaceID)
+	var params domain.ReportFilterParams
+	if err := c.ShouldBindQuery(&params); err != nil {
+		// Fallback to defaults
+		params.Period = "30d"
+	}
+	if params.Period == "" {
+		params.Period = "30d"
+	}
+	sources, err := h.reportService.GetLeadSourcesWithFilter(workspaceID, params)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, domain.ErrorResponse(err.Error()))
 		return

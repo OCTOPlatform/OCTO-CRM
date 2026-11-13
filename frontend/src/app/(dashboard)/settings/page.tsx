@@ -34,6 +34,11 @@ import {
   BookOpen,
   Code,
   FileText,
+  Megaphone,
+  Rocket,
+  Search,
+  Link2,
+  HelpCircle,
 } from 'lucide-react';
 
 export default function SettingsPage() {
@@ -46,7 +51,7 @@ export default function SettingsPage() {
     activeRole === 'admin' ||
     activeRole === 'supervisor' ||
     Boolean(user?.is_superadmin);
-  const [activeTab, setActiveTab] = useState<'workspace' | 'chatbot' | 'automations'>('workspace');
+  const [activeTab, setActiveTab] = useState<'workspace' | 'chatbot' | 'automations' | 'ads'>('workspace');
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
   const [invitations, setInvitations] = useState<WorkspaceInvitation[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditEvent[]>([]);
@@ -106,6 +111,20 @@ export default function SettingsPage() {
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedWA, setCopiedWA] = useState(false);
 
+  // Paid Ads (Meta, Google, TikTok) Integration States
+  const [testingMeta, setTestingMeta] = useState(false);
+  const [metaSuccessMsg, setMetaSuccessMsg] = useState<string | null>(null);
+  const [testingTikTok, setTestingTikTok] = useState(false);
+  const [tiktokSuccessMsg, setTiktokSuccessMsg] = useState<string | null>(null);
+  const [copiedMetaUrl, setCopiedMetaUrl] = useState(false);
+  const [copiedMetaToken, setCopiedMetaToken] = useState(false);
+  const [copiedTikTokUrl, setCopiedTikTokUrl] = useState(false);
+  const [copiedUtmUrl, setCopiedUtmUrl] = useState(false);
+  const [utmLandingUrl, setUtmLandingUrl] = useState('https://domain-anda.com/demo');
+  const [utmCampaign, setUtmCampaign] = useState('Promo-ScaleUp-Q2');
+  const [utmTerm, setUtmTerm] = useState('software-crm-indonesia');
+  const [utmContent, setUtmContent] = useState('banner-search-1');
+
   const apiBaseUrl =
     typeof window !== 'undefined'
       ? `${window.location.protocol}//${window.location.host.replace(':3000', ':8080')}/api/v1`
@@ -119,9 +138,70 @@ export default function SettingsPage() {
         setActiveTab('chatbot');
       } else if (tabParam === 'automations') {
         setActiveTab('automations');
+      } else if (tabParam === 'ads' || tabParam === 'marketing' || tabParam === 'integrations') {
+        setActiveTab('ads');
       }
     }
   }, []);
+
+  const handleTestMetaLead = async () => {
+    if (!currentWorkspace) return;
+    try {
+      setTestingMeta(true);
+      setMetaSuccessMsg(null);
+      const res = await fetch(`${apiBaseUrl}/workspaces/${currentWorkspace.id}/integrations/meta/webhook`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          full_name: 'Clarissa Aurelia (Meta IG Demo)',
+          phone: `0812${Math.floor(10000000 + Math.random() * 90000000)}`,
+          email: 'clarissa@aurorabeauty.id',
+          company_name: 'Aurora Beauty Cosmetics',
+          platform: 'instagram',
+          campaign_name: 'IG-Reels-Promo-Q2',
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMetaSuccessMsg('✅ Sukses! Lead simulasi Meta Ads (Instagram) telah berhasil masuk ke Kontak & Pipeline.');
+      } else {
+        alert(data.message || 'Gagal mengirim lead Meta Ads');
+      }
+    } catch (e: any) {
+      alert(e.message || 'Gagal mengirim webhook');
+    } finally {
+      setTestingMeta(false);
+    }
+  };
+
+  const handleTestTikTokLead = async () => {
+    if (!currentWorkspace) return;
+    try {
+      setTestingTikTok(true);
+      setTiktokSuccessMsg(null);
+      const res = await fetch(`${apiBaseUrl}/workspaces/${currentWorkspace.id}/integrations/tiktok/webhook`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          full_name: 'Dimas Pratama (TikTok Demo)',
+          phone: `0813${Math.floor(10000000 + Math.random() * 90000000)}`,
+          email: 'dimas@hypefashion.co',
+          company_name: 'Hype Fashion Store',
+          campaign_name: 'TikTok-FYP-ScaleUp',
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTiktokSuccessMsg('✅ Sukses! Lead simulasi TikTok Ads telah berhasil masuk ke Kontak & Pipeline.');
+      } else {
+        alert(data.message || 'Gagal mengirim lead TikTok Ads');
+      }
+    } catch (e: any) {
+      alert(e.message || 'Gagal mengirim webhook');
+    } finally {
+      setTestingTikTok(false);
+    }
+  };
 
   const loadData = async () => {
     if (!currentWorkspace) return;
@@ -407,6 +487,20 @@ export default function SettingsPage() {
           >
             <Zap className="w-4 h-4" />
             <span>⚡ Otomasi & Audit Log</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('ads')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition cursor-pointer ${
+              activeTab === 'ads'
+                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-xs'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <Megaphone className="w-4 h-4" />
+            <span>📢 Integrasi Iklan & Leads (Meta, Google, TikTok)</span>
+            <span className="px-1.5 py-0.2 bg-white/20 text-[10px] rounded-full">Baru</span>
           </button>
         </div>
 
@@ -1504,6 +1598,342 @@ export default function SettingsPage() {
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* ================= TAB 4: PAID ADS & LEADS INTEGRATIONS ================= */}
+    {activeTab === 'ads' && (
+      <div className="space-y-6">
+        {/* Header Banner */}
+        <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white p-6 rounded-2xl shadow-md space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-white backdrop-blur-xs">
+              <Megaphone className="w-5 h-5 text-pink-400" />
+            </div>
+            <div>
+              <h3 className="font-extrabold text-base">Integrasi Iklan Berbayar & Sumber Prospek (Paid Ads Ingestion)</h3>
+              <p className="text-xs text-purple-200 mt-0.5">
+                Hubungkan formulir instan Meta Ads, pelacakan Google Ads, dan TikTok Ads secara real-time ke OCTO-CRM.
+              </p>
+            </div>
+          </div>
+          <p className="text-xs text-slate-300 leading-relaxed border-t border-white/10 pt-3">
+            Setiap prospek yang mengisi formulir di media sosial akan langsung dibuatkan <strong>Kontak</strong>, <strong>Deal baru di Pipeline</strong>, dan <strong>Tugas follow-up tim Sales</strong> lengkap dengan atribusi sumber kampanye marketing tanpa input manual.
+          </p>
+        </div>
+
+        {/* ================= PLATFORM 1: META ADS ================= */}
+        <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-5">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-500 via-pink-500 to-amber-400 text-white flex items-center justify-center font-bold text-lg shadow-xs">
+                📸
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="font-extrabold text-sm text-[#142740]">Meta Ads (Instagram & Facebook Instant Forms)</h4>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">
+                    Real-time Webhook Aktif
+                  </span>
+                </div>
+                <p className="text-xs text-[#586779] mt-0.5">
+                  Menangkap data prospek otomatis saat audiens mengisi formulir pop-up di IG Reels, Stories, atau FB Feed.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleTestMetaLead}
+              disabled={testingMeta}
+              className="px-3.5 py-1.5 text-xs font-bold text-white bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            >
+              {testingMeta ? (
+                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                <Rocket className="w-3.5 h-3.5" />
+              )}
+              <span>Kirim Uji Coba Lead Meta Ads</span>
+            </button>
+          </div>
+
+          {metaSuccessMsg && (
+            <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs flex items-center justify-between">
+              <span>{metaSuccessMsg}</span>
+              <button onClick={() => setMetaSuccessMsg(null)} className="text-emerald-600 font-bold ml-2">✕</button>
+            </div>
+          )}
+
+          {/* Configuration Inputs */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Callback URL */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-700">
+                Webhook Callback URL (Salin ke Meta Ads Manager):
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={`${apiBaseUrl}/workspaces/${currentWorkspace?.id}/integrations/meta/webhook`}
+                  className="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none select-all"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${apiBaseUrl}/workspaces/${currentWorkspace?.id}/integrations/meta/webhook`);
+                    setCopiedMetaUrl(true);
+                    setTimeout(() => setCopiedMetaUrl(false), 2000);
+                  }}
+                  className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-1 shrink-0 cursor-pointer"
+                >
+                  {copiedMetaUrl ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedMetaUrl ? 'Tersalin' : 'Salin'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Verify Token */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-700">
+                Verify Token:
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value="octo_meta_token"
+                  className="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none select-all"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText('octo_meta_token');
+                    setCopiedMetaToken(true);
+                    setTimeout(() => setCopiedMetaToken(false), 2000);
+                  }}
+                  className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-1 shrink-0 cursor-pointer"
+                >
+                  {copiedMetaToken ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedMetaToken ? 'Tersalin' : 'Salin'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Guide Steps */}
+          <div className="bg-slate-50/75 p-4 rounded-xl border border-slate-200/80 text-xs space-y-2">
+            <div className="font-bold text-[#142740] flex items-center gap-1.5">
+              <HelpCircle className="w-4 h-4 text-purple-600" />
+              <span>Cara Memasang di Meta Business Suite / Meta Ads Manager:</span>
+            </div>
+            <ol className="list-decimal list-inside space-y-1 text-slate-600 leading-relaxed">
+              <li>Buka <strong>Meta Business Suite</strong> atau portal <a href="https://developers.facebook.com" target="_blank" rel="noreferrer" className="text-purple-600 underline font-semibold">Meta for Developers</a>.</li>
+              <li>Pilih App Anda -&gt; Tambahkan produk <strong>Webhooks</strong> -&gt; Pilih objek <strong>Page</strong>.</li>
+              <li>Masukkan <strong>Callback URL</strong> dan <strong>Verify Token</strong> di atas, lalu klik <strong>Verify and Save</strong>.</li>
+              <li>Centang langganan pada event <code>leadgen</code>.</li>
+              <li>Kini setiap calon pelanggan yang mengklik iklan Instagram/Facebook Anda akan langsung terkirim ke CRM dalam &lt; 2 detik!</li>
+            </ol>
+          </div>
+        </div>
+
+        {/* ================= PLATFORM 2: GOOGLE ADS ================= */}
+        <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-5">
+          <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-lg border border-emerald-200">
+              🔍
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="font-extrabold text-sm text-[#142740]">Google Ads (Search & Performance Max + UTM Generator)</h4>
+                <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold">
+                  Pelacakan UTM Aktif
+                </span>
+              </div>
+              <p className="text-xs text-[#586779] mt-0.5">
+                Lacak prospek dari pencarian Google ke Landing Page website Anda secara otomatis.
+              </p>
+            </div>
+          </div>
+
+          {/* Interactive UTM Campaign Builder */}
+          <div className="p-4 bg-emerald-50/50 border border-emerald-200/80 rounded-xl space-y-4">
+            <div className="text-xs font-bold text-[#142740] flex items-center gap-1.5">
+              <Link2 className="w-4 h-4 text-emerald-600" />
+              <span>Generator Tautan Iklan Google Ads (UTM Campaign Builder):</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+              <div>
+                <label className="block text-slate-600 font-semibold mb-1">URL Landing Page:</label>
+                <input
+                  type="text"
+                  value={utmLandingUrl}
+                  onChange={(e) => setUtmLandingUrl(e.target.value)}
+                  className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg bg-white text-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-600 font-semibold mb-1">Nama Kampanye (Campaign):</label>
+                <input
+                  type="text"
+                  value={utmCampaign}
+                  onChange={(e) => setUtmCampaign(e.target.value)}
+                  className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg bg-white text-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-600 font-semibold mb-1">Target Keyword (Term):</label>
+                <input
+                  type="text"
+                  value={utmTerm}
+                  onChange={(e) => setUtmTerm(e.target.value)}
+                  className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg bg-white text-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-600 font-semibold mb-1">Materi Iklan (Content):</label>
+                <input
+                  type="text"
+                  value={utmContent}
+                  onChange={(e) => setUtmContent(e.target.value)}
+                  className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg bg-white text-slate-800"
+                />
+              </div>
+            </div>
+
+            {/* Output URL Box */}
+            {(() => {
+              const fullUtmUrl = `${utmLandingUrl}${utmLandingUrl.includes('?') ? '&' : '?'}utm_source=google&utm_medium=cpc&utm_campaign=${encodeURIComponent(utmCampaign)}&utm_term=${encodeURIComponent(utmTerm)}&utm_content=${encodeURIComponent(utmContent)}`;
+              return (
+                <div className="space-y-1.5 pt-2">
+                  <label className="block text-xs font-bold text-emerald-900">
+                    Tautan Final Siap Pasang di Google Ads Manager:
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      readOnly
+                      value={fullUtmUrl}
+                      className="w-full px-3 py-2 text-xs font-mono bg-white border border-emerald-300 rounded-xl text-emerald-950 focus:outline-none select-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(fullUtmUrl);
+                        setCopiedUtmUrl(true);
+                        setTimeout(() => setCopiedUtmUrl(false), 2000);
+                      }}
+                      className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition flex items-center gap-1 shrink-0 cursor-pointer shadow-xs"
+                    >
+                      {copiedUtmUrl ? <Check className="w-3.5 h-3.5 text-white" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span>{copiedUtmUrl ? 'Tersalin' : 'Salin Tautan'}</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* Guide Steps */}
+          <div className="bg-slate-50/75 p-4 rounded-xl border border-slate-200/80 text-xs space-y-2">
+            <div className="font-bold text-[#142740] flex items-center gap-1.5">
+              <HelpCircle className="w-4 h-4 text-emerald-600" />
+              <span>Cara Memasang di Google Ads:</span>
+            </div>
+            <ol className="list-decimal list-inside space-y-1 text-slate-600 leading-relaxed">
+              <li>Masuk ke <strong>Google Ads Manager</strong> -&gt; Pilih Kampanye Iklan Pencarian (Search) atau Performance Max.</li>
+              <li>Di bagian <strong>Final URL (URL Final Iklan)</strong>, tempelkan tautan yang dihasilkan dari generator di atas.</li>
+              <li>Saat calon pelanggan mengklik iklan dan mengisi formulir kontak di website Anda, sistem secara otomatis melabeli prospek tersebut sebagai <code>Google Ads</code> di CRM.</li>
+            </ol>
+          </div>
+        </div>
+
+        {/* ================= PLATFORM 3: TIKTOK ADS ================= */}
+        <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-5">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-lg shadow-xs">
+                🎵
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="font-extrabold text-sm text-[#142740]">TikTok Ads (Lead Generation Forms)</h4>
+                  <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-800 border border-slate-300 text-[10px] font-bold">
+                    Webhook Aktif
+                  </span>
+                </div>
+                <p className="text-xs text-[#586779] mt-0.5">
+                  Menangkap data prospek otomatis dari formulir instan TikTok video ads.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleTestTikTokLead}
+              disabled={testingTikTok}
+              className="px-3.5 py-1.5 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            >
+              {testingTikTok ? (
+                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                <Rocket className="w-3.5 h-3.5" />
+              )}
+              <span>Kirim Uji Coba Lead TikTok</span>
+            </button>
+          </div>
+
+          {tiktokSuccessMsg && (
+            <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs flex items-center justify-between">
+              <span>{tiktokSuccessMsg}</span>
+              <button onClick={() => setTiktokSuccessMsg(null)} className="text-emerald-600 font-bold ml-2">✕</button>
+            </div>
+          )}
+
+          {/* Webhook URL Input */}
+          <div className="space-y-1.5">
+            <label className="block text-xs font-bold text-slate-700">
+              Webhook Callback URL TikTok (Salin ke TikTok Ads Manager):
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                readOnly
+                value={`${apiBaseUrl}/workspaces/${currentWorkspace?.id}/integrations/tiktok/webhook`}
+                className="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none select-all"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(`${apiBaseUrl}/workspaces/${currentWorkspace?.id}/integrations/tiktok/webhook`);
+                  setCopiedTikTokUrl(true);
+                  setTimeout(() => setCopiedTikTokUrl(false), 2000);
+                }}
+                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-1 shrink-0 cursor-pointer"
+              >
+                {copiedTikTokUrl ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copiedTikTokUrl ? 'Tersalin' : 'Salin'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Guide Steps */}
+          <div className="bg-slate-50/75 p-4 rounded-xl border border-slate-200/80 text-xs space-y-2">
+            <div className="font-bold text-[#142740] flex items-center gap-1.5">
+              <HelpCircle className="w-4 h-4 text-slate-800" />
+              <span>Cara Memasang di TikTok Ads Manager:</span>
+            </div>
+            <ol className="list-decimal list-inside space-y-1 text-slate-600 leading-relaxed">
+              <li>Buka <strong>TikTok Ads Manager</strong> -&gt; Masuk ke menu <strong>Assets</strong> -&gt; <strong>Instant Form</strong>.</li>
+              <li>Pilih formulir Anda -&gt; Klik <strong>Connect CRM / Third-Party Webhook</strong>.</li>
+              <li>Tempelkan <strong>Webhook Callback URL</strong> di atas dan simpan konfigurasi.</li>
+            </ol>
           </div>
         </div>
       </div>

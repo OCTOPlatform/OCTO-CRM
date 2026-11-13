@@ -12,8 +12,15 @@ type LeadIntakeRequest struct {
 	PreferredDate   string   `json:"preferred_date"`
 	PartnerType     string   `json:"partner_type"`
 	Location        string   `json:"location"`
+	LeadSource      string   `json:"lead_source"`
 	UTMSource       string   `json:"utm_source"`
+	UTMMedium       string   `json:"utm_medium"`
 	UTMCampaign     string   `json:"utm_campaign"`
+	UTMContent      string   `json:"utm_content"`
+	UTMTerm         string   `json:"utm_term"`
+	Platform        string   `json:"platform"`
+	AdID            string   `json:"ad_id"`
+	FormID          string   `json:"form_id"`
 	ConsentGiven    bool     `json:"consent_given"`
 	EstimatedValue  *float64 `json:"estimated_value"`
 	AssigneeID      *string  `json:"assignee_id"`

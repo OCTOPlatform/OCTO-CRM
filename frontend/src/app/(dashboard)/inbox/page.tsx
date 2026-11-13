@@ -2141,16 +2141,29 @@ export default function InboxPage() {
               ) : (
                 messages.map((msg) => {
                   const isAgent = msg.sender_type === 'agent';
+                  const isBot = msg.sender_type === 'bot' || Boolean(msg.metadata?.is_bot);
+                  const isOutgoing = isAgent || isBot;
 
                   return (
                     <div
                       key={msg.id}
-                      className={`flex flex-col ${isAgent ? 'items-end' : 'items-start'}`}
+                      className={`flex flex-col ${isOutgoing ? 'items-end' : 'items-start'}`}
                     >
                       <div className="flex items-center gap-1.5 mb-1 px-1">
-                        <span className="text-[10px] font-semibold text-slate-500">
-                          {isAgent ? `Anda (${msg.sender_name})` : msg.sender_name}
-                        </span>
+                        {isBot ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
+                            <Bot className="w-3 h-3 text-purple-600" />
+                            <span>{msg.sender_name || 'Asisten Virtual AI'}</span>
+                          </span>
+                        ) : isAgent ? (
+                          <span className="text-[10px] font-semibold text-slate-600">
+                            Anda ({msg.sender_name})
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-semibold text-slate-700">
+                            {msg.sender_name}
+                          </span>
+                        )}
                         <span className="text-[9px] text-slate-400">
                           {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
@@ -2158,7 +2171,9 @@ export default function InboxPage() {
 
                       <div
                         className={`max-w-lg p-3.5 rounded-2xl text-xs leading-relaxed shadow-xs ${
-                          isAgent
+                          isBot
+                            ? 'bg-gradient-to-br from-purple-50 to-indigo-50/80 text-purple-950 border border-purple-200/90 rounded-tr-xs'
+                            : isAgent
                             ? 'bg-[#142740] text-white rounded-tr-xs'
                             : 'bg-white text-slate-800 border border-slate-200 rounded-tl-xs'
                         }`}
@@ -2224,10 +2239,10 @@ export default function InboxPage() {
                       </div>
 
                       <div className="flex items-center gap-1 mt-1 px-1 text-[9px] text-slate-400">
-                        {isAgent && (
-                          <span className="flex items-center gap-0.5 text-[#00AFC4]">
+                        {isOutgoing && (
+                          <span className={`flex items-center gap-0.5 ${isBot ? 'text-purple-600' : 'text-[#00AFC4]'}`}>
                             <CheckCheck className="w-3 h-3" />
-                            <span>Terkirim ke WhatsApp {activeConv.channel_identifier}</span>
+                            <span>{isBot ? 'Terkirim via Bot Otomatis' : `Terkirim ke WhatsApp ${activeConv.channel_identifier}`}</span>
                           </span>
                         )}
                       </div>

@@ -11,6 +11,7 @@ interface NavbarProps {
   onQuickAddContact?: () => void;
   onQuickAddDeal?: () => void;
   onQuickAddTask?: () => void;
+  children?: React.ReactNode;
 }
 
 export default function Navbar({
@@ -19,6 +20,7 @@ export default function Navbar({
   onQuickAddContact,
   onQuickAddDeal,
   onQuickAddTask,
+  children,
 }: NavbarProps) {
   const { currentWorkspace, user, activeRole } = useAuth();
 
@@ -30,6 +32,9 @@ export default function Navbar({
       </div>
 
       <div className="flex items-center gap-3">
+        {/* Custom Header Badges or Metrics */}
+        {children}
+
         {/* Role Profile Badge (Otomatis berdasarkan akun & divisi yang login) */}
         <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200/80 bg-slate-50 text-xs font-medium">
           {activeRole === 'owner' ? (

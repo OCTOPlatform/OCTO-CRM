@@ -22,6 +22,11 @@ import {
   LifeBuoy,
   ShieldCheck,
   Bot,
+  Package,
+  Clock,
+  DollarSign,
+  Receipt,
+  Zap,
 } from 'lucide-react';
 
 interface NavItem {
@@ -79,6 +84,8 @@ export default function Sidebar() {
     } else {
       pipelineItems.push({ label: 'Deals Pipeline', href: '/pipeline', icon: Kanban });
     }
+    pipelineItems.push({ label: 'Penawaran & Invoice', href: '/invoices', icon: Receipt, badge: 'QRIS' });
+    pipelineItems.push({ label: 'Otomasi Follow-up WA', href: '/automations', icon: Zap, badge: 'Drip' });
 
     // 5. Operations (Tasks & Reports)
     const opItems: NavItem[] = [
@@ -98,7 +105,15 @@ export default function Sidebar() {
         items: chatItems,
       },
       { group: 'Sales & Pipeline', items: pipelineItems },
-      { group: 'Operations', items: opItems },
+      {
+        group: 'Unified Operations',
+        items: [
+          { label: 'Inventori & Produk', href: '/inventory', icon: Package, badge: 'Stok' },
+          { label: 'Presensi & Absensi', href: '/attendance', icon: Clock, badge: 'GPS' },
+          { label: 'Penggajian & Komisi', href: '/payroll', icon: DollarSign, badge: 'Formula' },
+        ],
+      },
+      { group: 'Analytics & Tasks', items: opItems },
     ];
 
     // 6. Administration (Owner & Admin / Supervisor / Lead)

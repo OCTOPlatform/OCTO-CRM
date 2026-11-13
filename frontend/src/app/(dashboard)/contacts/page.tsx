@@ -24,6 +24,7 @@ import {
   CheckCircle2,
   Trash2,
   Edit,
+  MessageSquare,
 } from 'lucide-react';
 
 export default function ContactsPage() {
@@ -260,11 +261,14 @@ export default function ContactsPage() {
               className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#00AFC4]"
             >
               <option value="">Semua Sumber (Source)</option>
+              <option value="Meta Ads (Instagram)">Meta Ads (Instagram)</option>
+              <option value="Meta Ads (Facebook)">Meta Ads (Facebook)</option>
+              <option value="Google Ads">Google Ads</option>
+              <option value="TikTok Ads">TikTok Ads</option>
+              <option value="WhatsApp CTWA">WhatsApp CTWA</option>
               <option value="Website">Website</option>
               <option value="OCTO Tap">OCTO Tap</option>
               <option value="Referral">Referral</option>
-              <option value="Instagram">Instagram</option>
-              <option value="WhatsApp">WhatsApp</option>
               <option value="Organic">Organic</option>
             </select>
 
@@ -339,14 +343,21 @@ export default function ContactsPage() {
                   contacts.map((contact) => (
                     <tr key={contact.id} className="hover:bg-slate-50/70 transition">
                       <td className="px-5 py-3.5">
-                        <Link
-                          href={`/contacts/${contact.id}`}
-                          className="font-bold text-[#142740] hover:text-[#00AFC4] transition"
-                        >
-                          {contact.full_name}
-                        </Link>
-                        <div className="text-[11px] text-[#586779]">
-                          ID: {contact.id.slice(0, 8)}...
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#142740] to-[#00AFC4] text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs">
+                            {contact.first_name ? contact.first_name.charAt(0).toUpperCase() : 'C'}
+                          </div>
+                          <div className="min-w-0">
+                            <Link
+                              href={`/contacts/${contact.id}`}
+                              className="font-bold text-[#142740] hover:text-[#00AFC4] transition block truncate"
+                            >
+                              {contact.full_name}
+                            </Link>
+                            <div className="text-[11px] text-[#586779]">
+                              ID: {contact.id.slice(0, 8)}...
+                            </div>
+                          </div>
                         </div>
                       </td>
 
@@ -361,14 +372,24 @@ export default function ContactsPage() {
 
                       <td className="px-4 py-3.5">
                         {contact.phone && (
-                          <div className="flex items-center gap-1.5 text-slate-700">
-                            <Phone className="w-3 h-3 text-slate-400" />
+                          <div className="flex items-center gap-2 text-slate-700">
+                            <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                             <span>{contact.phone}</span>
+                            <a
+                              href={`https://wa.me/${contact.normalized_phone || contact.phone.replace(/[^0-9]/g, '')}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              title="Chat WhatsApp Langsung"
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition text-[10px] font-bold"
+                            >
+                              <MessageSquare className="w-3 h-3" />
+                              <span>WA</span>
+                            </a>
                           </div>
                         )}
                         {contact.email && (
-                          <div className="flex items-center gap-1.5 text-slate-500 mt-0.5">
-                            <Mail className="w-3 h-3 text-slate-400" />
+                          <div className="flex items-center gap-1.5 text-slate-500 mt-1">
+                            <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                             <span>{contact.email}</span>
                           </div>
                         )}
@@ -512,11 +533,14 @@ export default function ContactsPage() {
                     onChange={(e) => setFormSource(e.target.value)}
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-[#00AFC4]"
                   >
-                    <option value="Website">Website</option>
+                    <option value="Website">Website Form</option>
+                    <option value="Meta Ads (Instagram)">Meta Ads (Instagram)</option>
+                    <option value="Meta Ads (Facebook)">Meta Ads (Facebook)</option>
+                    <option value="Google Ads">Google Ads</option>
+                    <option value="TikTok Ads">TikTok Ads</option>
+                    <option value="WhatsApp CTWA">WhatsApp CTWA</option>
                     <option value="OCTO Tap">OCTO Tap</option>
                     <option value="Referral">Referral</option>
-                    <option value="Instagram">Instagram</option>
-                    <option value="WhatsApp">WhatsApp</option>
                     <option value="Organic">Organic</option>
                   </select>
                 </div>
