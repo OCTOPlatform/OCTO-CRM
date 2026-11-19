@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth, formatDateIndo, formatDateTimeIndo } from '@/lib/auth-context';
 import { api } from '@/lib/api';
 import Navbar from '@/components/layout/Navbar';
-import { WorkspaceMember, AuditEvent, WorkspaceInvitation, WorkspaceAutomation, WorkspaceBotSettings } from '@/types';
+import { WorkspaceMember, AuditEvent, WorkspaceInvitation, WorkspaceAutomation, WorkspaceBotSettings, WorkspacePaymentSettings } from '@/types';
 import {
   Settings,
   Shield,
@@ -39,6 +39,11 @@ import {
   Search,
   Link2,
   HelpCircle,
+  CreditCard,
+  QrCode,
+  ArrowRight,
+  CheckCheck,
+  Upload,
 } from 'lucide-react';
 
 export default function SettingsPage() {
@@ -51,7 +56,7 @@ export default function SettingsPage() {
     activeRole === 'admin' ||
     activeRole === 'supervisor' ||
     Boolean(user?.is_superadmin);
-  const [activeTab, setActiveTab] = useState<'workspace' | 'chatbot' | 'automations' | 'ads'>('workspace');
+  const [activeTab, setActiveTab] = useState<'workspace' | 'chatbot' | 'automations' | 'ads' | 'payment'>('workspace');
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
   const [invitations, setInvitations] = useState<WorkspaceInvitation[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditEvent[]>([]);
@@ -125,6 +130,26 @@ export default function SettingsPage() {
   const [utmTerm, setUtmTerm] = useState('software-crm-indonesia');
   const [utmContent, setUtmContent] = useState('banner-search-1');
 
+  // Payment & QRIS Settings State
+  const [paymentSettings, setPaymentSettings] = useState<WorkspacePaymentSettings | null>(null);
+  const [bankName, setBankName] = useState('BCA');
+  const [bankAccountNumber, setBankAccountNumber] = useState('');
+  const [bankAccountHolder, setBankAccountHolder] = useState('');
+  const [qrisImageUrl, setQrisImageUrl] = useState('');
+  const [qrisPayload, setQrisPayload] = useState('');
+  const [paymentProvider, setPaymentProvider] = useState<'manual' | 'autogopay' | 'midtrans' | 'xendit'>('manual');
+  const [midtransClientKey, setMidtransClientKey] = useState('');
+  const [midtransServerKey, setMidtransServerKey] = useState('');
+  const [gatewayIsProduction, setGatewayIsProduction] = useState(false);
+  const [autogopayApiKey, setAutogopayApiKey] = useState('');
+  const [autogopayMerchantName, setAutogopayMerchantName] = useState('');
+  const [copiedWebhookUrl, setCopiedWebhookUrl] = useState(false);
+  const [savingPayment, setSavingPayment] = useState(false);
+  const [uploadingQRIS, setUploadingQRIS] = useState(false);
+  const [paymentSuccessMsg, setPaymentSuccessMsg] = useState<string | null>(null);
+  const [paymentErrorMsg, setPaymentErrorMsg] = useState<string | null>(null);
+  const [copiedBankPreview, setCopiedBankPreview] = useState(false);
+
   const apiBaseUrl =
     typeof window !== 'undefined'
       ? `${window.location.protocol}//${window.location.host.replace(':3000', ':8080')}/api/v1`
@@ -140,6 +165,8 @@ export default function SettingsPage() {
         setActiveTab('automations');
       } else if (tabParam === 'ads' || tabParam === 'marketing' || tabParam === 'integrations') {
         setActiveTab('ads');
+      } else if (tabParam === 'payment' || tabParam === 'qris' || tabParam === 'bank' || tabParam === 'rekening') {
+        setActiveTab('payment');
       }
     }
   }, []);
@@ -211,17 +238,33 @@ export default function SettingsPage() {
       setWsTimezone(currentWorkspace.timezone || 'Asia/Jakarta');
       setWsCurrency(currentWorkspace.currency || 'IDR');
 
-      const [memberList, logList, inviteList, autoList, botData] = await Promise.all([
+      const [memberList, logList, inviteList, autoList, botData, paymentData] = await Promise.all([
         api.listMembers(currentWorkspace.id),
         api.listAuditLogs(currentWorkspace.id, 25).catch(() => []),
         api.listInvitations(currentWorkspace.id).catch(() => []),
         api.listAutomations(currentWorkspace.id).catch(() => []),
         api.getBotSettings(currentWorkspace.id).catch(() => null),
+        api.getPaymentSettings(currentWorkspace.id).catch(() => null),
       ]);
       setMembers(memberList);
       setAuditLogs(logList);
       setInvitations(inviteList);
       setAutomations(autoList);
+
+      if (paymentData) {
+        setPaymentSettings(paymentData);
+        setBankName(paymentData.bank_name || 'BCA');
+        setBankAccountNumber(paymentData.bank_account_number || '');
+        setBankAccountHolder(paymentData.bank_account_holder || '');
+        setQrisImageUrl(paymentData.qris_image_url || '');
+        setQrisPayload(paymentData.qris_payload || '');
+        setPaymentProvider((paymentData.payment_gateway_provider as any) || 'manual');
+        setMidtransClientKey(paymentData.payment_gateway_client_key || '');
+        setMidtransServerKey(paymentData.payment_gateway_server_key || '');
+        setGatewayIsProduction(paymentData.payment_gateway_is_production || false);
+        setAutogopayApiKey(paymentData.autogopay_api_key || '');
+        setAutogopayMerchantName(paymentData.autogopay_merchant_name || '');
+      }
 
       if (botData) {
         setBotSettings(botData);
@@ -284,6 +327,58 @@ export default function SettingsPage() {
       setBotErrorMsg(err.message || 'Gagal menyimpan template chatbot');
     } finally {
       setSavingBot(false);
+    }
+  };
+
+  const handleSavePaymentSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentWorkspace) return;
+    if (!isOwnerOrAdmin) {
+      alert('Hanya Owner dan Admin yang berwenang mengubah rekening dan QRIS perusahaan.');
+      return;
+    }
+    try {
+      setSavingPayment(true);
+      setPaymentSuccessMsg(null);
+      setPaymentErrorMsg(null);
+      const updated = await api.updatePaymentSettings(currentWorkspace.id, {
+        bank_name: bankName,
+        bank_account_number: bankAccountNumber,
+        bank_account_holder: bankAccountHolder,
+        qris_image_url: qrisImageUrl,
+        qris_payload: qrisPayload,
+        payment_gateway_provider: paymentProvider,
+        payment_gateway_client_key: midtransClientKey,
+        payment_gateway_server_key: midtransServerKey,
+        payment_gateway_is_production: gatewayIsProduction,
+        autogopay_api_key: autogopayApiKey,
+        autogopay_merchant_name: autogopayMerchantName,
+      });
+      setPaymentSettings(updated);
+      setPaymentSuccessMsg('Pengaturan Rekening Bank & QRIS Perusahaan berhasil disimpan!');
+    } catch (err: any) {
+      setPaymentErrorMsg(err.message || 'Gagal menyimpan pengaturan pembayaran');
+    } finally {
+      setSavingPayment(false);
+    }
+  };
+
+  const handleUploadQRIS = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentWorkspace) return;
+    try {
+      setUploadingQRIS(true);
+      setPaymentErrorMsg(null);
+      const res = await api.uploadQRISImage(currentWorkspace.id, file);
+      const fullUrl = res.url.startsWith('http')
+        ? res.url
+        : `${apiBaseUrl.replace('/api/v1', '')}${res.url}`;
+      setQrisImageUrl(fullUrl);
+      setPaymentSuccessMsg('Gambar barcode QRIS resmi berhasil diunggah! Klik tombol "Simpan Konfigurasi" di bawah untuk menerapkan.');
+    } catch (err: any) {
+      setPaymentErrorMsg(err.message || 'Gagal mengunggah gambar QRIS');
+    } finally {
+      setUploadingQRIS(false);
     }
   };
 
@@ -501,6 +596,20 @@ export default function SettingsPage() {
             <Megaphone className="w-4 h-4" />
             <span>📢 Integrasi Iklan & Leads (Meta, Google, TikTok)</span>
             <span className="px-1.5 py-0.2 bg-white/20 text-[10px] rounded-full">Baru</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('payment')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition cursor-pointer ${
+              activeTab === 'payment'
+                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-xs'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <CreditCard className="w-4 h-4" />
+            <span>💳 Rekening Bank & QRIS Resmi</span>
+            <span className="px-1.5 py-0.2 bg-white/20 text-[10px] rounded-full">Standar BI</span>
           </button>
         </div>
 
@@ -1934,6 +2043,665 @@ export default function SettingsPage() {
               <li>Pilih formulir Anda -&gt; Klik <strong>Connect CRM / Third-Party Webhook</strong>.</li>
               <li>Tempelkan <strong>Webhook Callback URL</strong> di atas dan simpan konfigurasi.</li>
             </ol>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* ================= TAB 5: COMPANY BANK ACCOUNT & QRIS SETTINGS ================= */}
+    {activeTab === 'payment' && (
+      <div className="space-y-6">
+        {/* Header Banner */}
+        <div className="bg-gradient-to-r from-[#142740] via-teal-900 to-emerald-950 text-white p-6 rounded-2xl shadow-md space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-emerald-300 backdrop-blur-xs">
+              <CreditCard className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-lg">Rekening Bank Perusahaan &amp; Barcode QRIS Resmi</h3>
+                <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 text-[10px] font-bold rounded-full border border-emerald-400/30">
+                  Standar ASPI / Bank Indonesia
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 mt-0.5">
+                Konfigurasi rekening resmi operasional PT / Perusahaan Anda dan QRIS Nasional. Informasi ini otomatis muncul pada setiap faktur tagihan (invoice) klien untuk memastikan dana masuk langsung ke satu rekening resmi.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 pt-2 border-t border-white/10 text-[11px] text-slate-300 flex-wrap">
+            <span className="flex items-center gap-1">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Multi-Bank Nasional (BCA, Mandiri, BRI, BNI, BSI)</span>
+            </span>
+            <span className="text-white/30">•</span>
+            <span className="flex items-center gap-1">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Barcode QRIS Scannable Seluruh e-Wallet &amp; m-Banking</span>
+            </span>
+            <span className="text-white/30">•</span>
+            <span className="flex items-center gap-1">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Dukungan Payment Gateway (Midtrans &amp; Xendit)</span>
+            </span>
+          </div>
+        </div>
+
+        {paymentSuccessMsg && (
+          <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-xl text-xs flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>{paymentSuccessMsg}</span>
+          </div>
+        )}
+
+        {paymentErrorMsg && (
+          <div className="bg-rose-50 border border-rose-200 text-rose-800 px-4 py-3 rounded-xl text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+            <span>{paymentErrorMsg}</span>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* LEFT: Konfigurasi Form (7 Cols) */}
+          <form onSubmit={handleSavePaymentSettings} className="lg:col-span-7 space-y-5">
+            {/* CARD 1: Rekening Bank Perusahaan */}
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <Building className="w-4 h-4 text-[#00AFC4]" />
+                  <h4 className="font-bold text-sm text-[#142740]">1. Rekening Bank Resmi Perusahaan</h4>
+                </div>
+                <span className="text-[10px] text-slate-400 font-mono">Transfer Manual &amp; VA</span>
+              </div>
+
+              <div className="space-y-3.5">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Nama Bank Perusahaan <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    value={bankName}
+                    onChange={(e) => setBankName(e.target.value)}
+                    disabled={!isOwnerOrAdmin}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-[#00AFC4] bg-white"
+                  >
+                    <option value="BCA">Bank Central Asia (BCA)</option>
+                    <option value="Bank Mandiri">Bank Mandiri</option>
+                    <option value="BRI">Bank Rakyat Indonesia (BRI)</option>
+                    <option value="BNI">Bank Negara Indonesia (BNI)</option>
+                    <option value="Bank Syariah Indonesia (BSI)">Bank Syariah Indonesia (BSI)</option>
+                    <option value="CIMB Niaga">CIMB Niaga</option>
+                    <option value="Permata Bank">Permata Bank</option>
+                    <option value="Bank Danamon">Bank Danamon</option>
+                    <option value="Bank Jago">Bank Jago</option>
+                    <option value="Seabank">SeaBank Indonesia</option>
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Nomor Rekening <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={bankAccountNumber}
+                      onChange={(e) => setBankAccountNumber(e.target.value)}
+                      disabled={!isOwnerOrAdmin}
+                      placeholder="Contoh: 880129994012"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono font-bold text-slate-800 focus:ring-2 focus:ring-[#00AFC4]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Atas Nama Rekening (PT/Badan Usaha) <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={bankAccountHolder}
+                      onChange={(e) => setBankAccountHolder(e.target.value)}
+                      disabled={!isOwnerOrAdmin}
+                      placeholder="Contoh: PT Maju Bersama Solusindo"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-[#00AFC4]"
+                    />
+                  </div>
+                </div>
+
+                <p className="text-[11px] text-slate-500 bg-slate-50 p-2.5 rounded-xl border border-slate-200/80 leading-relaxed">
+                  💡 <strong>Catatan Kepatuhan:</strong> Pastikan Atas Nama Rekening mencantumkan nama legal perusahaan (PT/CV) sesuai rekening koran resmi agar klien merasa aman saat mentransfer dana invoice.
+                </p>
+              </div>
+            </div>
+
+            {/* CARD 2: QRIS Standar Nasional */}
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <QrCode className="w-4 h-4 text-emerald-600" />
+                  <h4 className="font-bold text-sm text-[#142740]">2. Barcode QRIS Standar Nasional (ASPI / BI)</h4>
+                </div>
+                <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-bold rounded-full">
+                  Bebas MDR / Statis
+                </span>
+              </div>
+
+              {/* Educational Alert: Mengapa QRIS harus dari Acquirer Resmi */}
+              <div className="bg-amber-50/80 border border-amber-200 rounded-2xl p-4 text-xs space-y-2 text-amber-950">
+                <div className="flex items-center gap-2 font-bold text-amber-900">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>PENTING: Mengapa Scan m-Banking Bisa Muncul &quot;QRIS Tidak Sah / Tidak Dikenali&quot;?</span>
+                </div>
+                <p className="leading-relaxed text-[11px] text-amber-900/90">
+                  Sesuai regulasi <strong>Bank Indonesia (BI)</strong> &amp; <strong>ASPI</strong>, aplikasi m-Banking (BCA Mobile, Livin&apos; Mandiri, BRImo, BNI) memverifikasi kode <strong>NMID (National Merchant ID)</strong> resmi ke jaringan switching nasional (PTEN). Barcode <em>tidak dapat dibuat secara mandiri</em> hanya dari nomor rekening biasa.
+                </p>
+                <div className="bg-white/80 p-3 rounded-xl border border-amber-200 text-[11px] space-y-1.5">
+                  <span className="font-bold text-amber-950 block">💡 2 Solusi Resmi Agar QRIS BCA Anda Sah &amp; Berfungsi:</span>
+                  <div className="space-y-1 text-slate-700">
+                    <p>
+                      <strong>1. Merchant BCA / GoPay / OVO:</strong> Daftarkan rekening BCA Anda ke aplikasi resmi <em>Merchant BCA</em> (atau GoPay/DANA Bisnis). Setelah disetujui, unduh file gambar QRIS resmi dari BCA, lalu klik tombol <strong>&quot;Unggah File Gambar QRIS&quot;</strong> di bawah ini.
+                    </p>
+                    <p>
+                      <strong>2. Payment Gateway Otomatis (Midtrans / Xendit):</strong> Aktifkan mode Payment Gateway pada bagian (3) di bawah untuk menerbitkan Dynamic QRIS per-invoice otomatis yang langsung divalidasi oleh Bank Indonesia.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3.5">
+                {/* File Upload Action */}
+                <div className="p-4 bg-slate-50 border border-dashed border-slate-300 rounded-2xl space-y-2 text-center">
+                  <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto">
+                    <Upload className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h5 className="font-bold text-xs text-slate-800">Unggah Gambar QRIS Resmi Perusahaan</h5>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Unggah file gambar barcode (.PNG, .JPG) yang diterbitkan oleh Merchant BCA, Livin Usaha, atau GoPay Merchant.
+                    </p>
+                  </div>
+                  <div className="pt-1">
+                    <label className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-bold rounded-xl transition cursor-pointer shadow-xs">
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>{uploadingQRIS ? 'Mengunggah...' : 'Pilih File Gambar QRIS Asli'}</span>
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/jpg,image/webp"
+                        onChange={handleUploadQRIS}
+                        disabled={uploadingQRIS || !isOwnerOrAdmin}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Atau Masukkan Tautan / URL Gambar Barcode QRIS
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      value={qrisImageUrl}
+                      onChange={(e) => setQrisImageUrl(e.target.value)}
+                      disabled={!isOwnerOrAdmin}
+                      placeholder="https://... atau /uploads/qris/..."
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono text-slate-700 focus:ring-2 focus:ring-emerald-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const defaultPayload = qrisPayload || `00020101021126600016ID.CO.QRIS.WWW01189360052300000123455204599953033605802ID5924${(bankAccountHolder || 'PT MAJU BERSAMA').slice(0, 24).toUpperCase()}6007JAKARTA61051011062070703A0163045E1A`;
+                        setQrisPayload(defaultPayload);
+                        setQrisImageUrl(`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(defaultPayload)}`);
+                      }}
+                      className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition shrink-0 cursor-pointer"
+                      title="Generate Barcode Simulasi"
+                    >
+                      Preset Demo
+                    </button>
+                  </div>
+                  <span className="text-[10px] text-slate-400">
+                    URL file gambar barcode QRIS yang akan ditampilkan pada invoice penagihan klien.
+                  </span>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    QRIS Payload String (EMVCo / ASPI Specification)
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={qrisPayload}
+                    onChange={(e) => setQrisPayload(e.target.value)}
+                    disabled={!isOwnerOrAdmin}
+                    placeholder="00020101021126600016ID.CO.QRIS.WWW01189360052300000123455204599953033605802ID5924PT MAJU BERSAMA SOLUSIN6007JAKARTA61051011062070703A0163045E1A"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono text-slate-600 focus:ring-2 focus:ring-emerald-500"
+                  />
+                  <div className="flex items-center justify-between text-[10px] text-slate-400 mt-0.5">
+                    <span>String spesifikasi EMVCo dari bank acquirer Anda.</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const standardPayload = `00020101021126600016ID.CO.QRIS.WWW01189360052300000123455204599953033605802ID5924${(bankAccountHolder || currentWorkspace?.name || 'PT MAJU BERSAMA SOLUSINDO').slice(0, 24).toUpperCase()}6007JAKARTA61051011062070703A0163045E1A`;
+                        setQrisPayload(standardPayload);
+                        setQrisImageUrl(`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(standardPayload)}`);
+                      }}
+                      className="text-emerald-600 hover:underline font-semibold cursor-pointer"
+                    >
+                      Format Contoh ASPI
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* CARD 3: Payment Gateway & Otomasi (Opsional) */}
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-purple-600" />
+                  <h4 className="font-bold text-sm text-[#142740]">3. Mode Pembayaran &amp; Gateway (Opsional)</h4>
+                </div>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                  paymentProvider === 'autogopay'
+                    ? 'text-emerald-700 bg-emerald-50 border border-emerald-200'
+                    : paymentProvider === 'manual'
+                    ? 'text-slate-600 bg-slate-100'
+                    : 'text-purple-700 bg-purple-50'
+                }`}>
+                  {paymentProvider === 'manual' ? 'Rekening Manual' : paymentProvider === 'autogopay' ? 'AutoGoPay Aktif' : 'Gateway Aktif'}
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                  <label
+                    className={`p-3 rounded-xl border text-xs cursor-pointer flex flex-col justify-between space-y-1 transition ${
+                      paymentProvider === 'manual'
+                        ? 'border-emerald-500 bg-emerald-50/50 text-emerald-950 ring-1 ring-emerald-500'
+                        : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold">Manual &amp; QRIS Statis</span>
+                      <input
+                        type="radio"
+                        name="payment_provider"
+                        value="manual"
+                        checked={paymentProvider === 'manual'}
+                        onChange={() => setPaymentProvider('manual')}
+                        className="text-emerald-600"
+                      />
+                    </div>
+                    <p className="text-[10px] text-slate-500">Bebas MDR. Verifikasi transfer manual oleh tim finance.</p>
+                  </label>
+
+                  <label
+                    className={`p-3 rounded-xl border text-xs cursor-pointer flex flex-col justify-between space-y-1 transition ${
+                      paymentProvider === 'autogopay'
+                        ? 'border-emerald-500 bg-emerald-50/50 text-emerald-950 ring-1 ring-emerald-500'
+                        : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold flex items-center gap-1 text-emerald-700">
+                        <span>AutoGoPay</span>
+                        <span className="px-1.5 py-0.2 bg-emerald-100 text-emerald-800 text-[9px] rounded font-black">GoPay</span>
+                      </span>
+                      <input
+                        type="radio"
+                        name="payment_provider"
+                        value="autogopay"
+                        checked={paymentProvider === 'autogopay'}
+                        onChange={() => setPaymentProvider('autogopay')}
+                        className="text-emerald-600"
+                      />
+                    </div>
+                    <p className="text-[10px] text-slate-500">QRIS dinamis resmi GoPay Merchant + auto webhook instant.</p>
+                  </label>
+
+                  <label
+                    className={`p-3 rounded-xl border text-xs cursor-pointer flex flex-col justify-between space-y-1 transition ${
+                      paymentProvider === 'midtrans'
+                        ? 'border-[#00AFC4] bg-teal-50/50 text-slate-900 ring-1 ring-[#00AFC4]'
+                        : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold">Midtrans Gateway</span>
+                      <input
+                        type="radio"
+                        name="payment_provider"
+                        value="midtrans"
+                        checked={paymentProvider === 'midtrans'}
+                        onChange={() => setPaymentProvider('midtrans')}
+                        className="text-[#00AFC4]"
+                      />
+                    </div>
+                    <p className="text-[10px] text-slate-500">QRIS dinamis Snap &amp; webhook status lunas.</p>
+                  </label>
+
+                  <label
+                    className={`p-3 rounded-xl border text-xs cursor-pointer flex flex-col justify-between space-y-1 transition ${
+                      paymentProvider === 'xendit'
+                        ? 'border-purple-500 bg-purple-50/50 text-purple-950 ring-1 ring-purple-500'
+                        : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold">Xendit Gateway</span>
+                      <input
+                        type="radio"
+                        name="payment_provider"
+                        value="xendit"
+                        checked={paymentProvider === 'xendit'}
+                        onChange={() => setPaymentProvider('xendit')}
+                        className="text-purple-600"
+                      />
+                    </div>
+                    <p className="text-[10px] text-slate-500">Virtual Account otomatis &amp; invoice xenplatform.</p>
+                  </label>
+                </div>
+
+                {/* AutoGoPay Settings Box */}
+                {paymentProvider === 'autogopay' && (
+                  <div className="p-4 bg-emerald-50/40 border border-emerald-200 rounded-2xl space-y-3.5 mt-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-black text-xs">
+                          GP
+                        </div>
+                        <div>
+                          <span className="text-xs font-bold text-emerald-950">
+                            Konfigurasi Integrasi AutoGoPay (GoPay Merchant)
+                          </span>
+                          <p className="text-[10px] text-slate-500">
+                            Terhubung langsung dengan gateway AutoGoPay untuk menerbitkan Dynamic QRIS nominal presisi
+                          </p>
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full">
+                        v1-gateway.autogopay.site
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                          API Key AutoGoPay <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          type="password"
+                          value={autogopayApiKey}
+                          onChange={(e) => setAutogopayApiKey(e.target.value)}
+                          disabled={!isOwnerOrAdmin}
+                          placeholder="Masukkan API Key dari dashboard AutoGoPay"
+                          className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono focus:ring-2 focus:ring-emerald-500 bg-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                          Nama Merchant GoPay Resmi
+                        </label>
+                        <input
+                          type="text"
+                          value={autogopayMerchantName}
+                          onChange={(e) => setAutogopayMerchantName(e.target.value)}
+                          disabled={!isOwnerOrAdmin}
+                          placeholder="Contoh: PT MAJU BERSAMA / KEDAI KOPI"
+                          className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-emerald-500 bg-white"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Webhook Callback URL Copy Box */}
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                        Webhook Callback URL (Pasang di Akun AutoGoPay Anda)
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          readOnly
+                          value={currentWorkspace ? `${apiBaseUrl}/workspaces/${currentWorkspace.id}/integrations/autogopay/webhook` : ''}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono bg-slate-100 text-slate-700 select-all"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!currentWorkspace) return;
+                            const url = `${apiBaseUrl}/workspaces/${currentWorkspace.id}/integrations/autogopay/webhook`;
+                            navigator.clipboard.writeText(url);
+                            setCopiedWebhookUrl(true);
+                            setTimeout(() => setCopiedWebhookUrl(false), 2000);
+                          }}
+                          className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition shrink-0 flex items-center gap-1.5 cursor-pointer shadow-xs"
+                          title="Salin Webhook URL"
+                        >
+                          {copiedWebhookUrl ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-emerald-200" />
+                              <span>Tersalin!</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3.5 h-3.5" />
+                              <span>Salin URL</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-slate-500 mt-1">
+                        🔒 Notifikasi pembayaran dienkripsi dengan <code>X-Signature</code> (HMAC-SHA256). Saat uang diterima, status invoice otomatis berubah menjadi <strong>PAID</strong> secara real-time.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {(paymentProvider === 'midtrans' || paymentProvider === 'xendit') && (
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3 mt-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-800">
+                        Kunci API {paymentProvider === 'midtrans' ? 'Midtrans' : 'Xendit'}
+                      </span>
+                      <label className="flex items-center gap-2 text-xs cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={gatewayIsProduction}
+                          onChange={(e) => setGatewayIsProduction(e.target.checked)}
+                          className="rounded text-emerald-600"
+                        />
+                        <span className={`font-semibold ${gatewayIsProduction ? 'text-emerald-700' : 'text-slate-500'}`}>
+                          {gatewayIsProduction ? 'Mode Produksi (Live)' : 'Mode Sandbox / Testing'}
+                        </span>
+                      </label>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                          Client Key / Public Key
+                        </label>
+                        <input
+                          type="text"
+                          value={midtransClientKey}
+                          onChange={(e) => setMidtransClientKey(e.target.value)}
+                          placeholder="SB-Mid-client-..."
+                          className="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-mono"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                          Server Key / Secret Key
+                        </label>
+                        <input
+                          type="password"
+                          value={midtransServerKey}
+                          onChange={(e) => setMidtransServerKey(e.target.value)}
+                          placeholder="SB-Mid-server-..."
+                          className="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-mono"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Submit Action */}
+            <div className="flex justify-end pt-2">
+              <button
+                type="submit"
+                disabled={savingPayment || !isOwnerOrAdmin}
+                className="px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-xs rounded-xl shadow-md transition cursor-pointer flex items-center gap-2 disabled:opacity-50"
+              >
+                {savingPayment ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Menyimpan Pengaturan...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    <span>Simpan Konfigurasi Rekening &amp; QRIS</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+
+          {/* RIGHT: Live Interactive Preview (5 Cols) */}
+          <div className="lg:col-span-5 space-y-4">
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-lg p-5 space-y-4 sticky top-6">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="font-extrabold text-xs text-[#142740]">Live Preview Kartu QRIS Klien</span>
+                </div>
+                <span className="text-[10px] bg-slate-100 text-slate-600 font-bold px-2 py-0.5 rounded-full">
+                  Real-Time
+                </span>
+              </div>
+
+              {/* Realistic ASPI National Standard QRIS Display Stand */}
+              <div className="bg-white rounded-2xl border-2 border-slate-300 overflow-hidden shadow-md">
+                {/* QRIS Top Banner (Red & White official style) */}
+                <div className="bg-[#ED1C24] text-white px-4 py-2.5 text-center flex flex-col items-center justify-center">
+                  <div className="font-black text-lg tracking-wider leading-none">QRIS</div>
+                  <div className="text-[8px] font-bold tracking-widest uppercase opacity-90 mt-0.5">
+                    Quick Response Code Indonesian Standard
+                  </div>
+                </div>
+
+                {/* Merchant Name & NMID */}
+                <div className="p-3 text-center border-b border-slate-100 bg-slate-50/50">
+                  <div className="font-black text-xs text-slate-900 uppercase truncate">
+                    {bankAccountHolder || currentWorkspace?.name || 'PT Maju Bersama Solusindo'}
+                  </div>
+                  <div className="text-[9px] font-mono font-semibold text-slate-400 mt-0.5">
+                    NMID: ID1020039281921 • A01
+                  </div>
+                </div>
+
+                {/* Scannable Barcode Image Frame */}
+                <div className="p-4 bg-white flex flex-col items-center justify-center">
+                  <div className="w-48 h-48 bg-white p-2 rounded-xl border border-slate-200 shadow-inner flex items-center justify-center relative">
+                    {qrisImageUrl ? (
+                      <img
+                        src={qrisImageUrl.startsWith('http') ? qrisImageUrl : `${apiBaseUrl.replace('/api/v1', '')}${qrisImageUrl.startsWith('/') ? '' : '/'}${qrisImageUrl}`}
+                        alt="QRIS Barcode"
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center text-slate-400 space-y-1">
+                        <QrCode className="w-24 h-24 text-slate-700" />
+                        <span className="text-[9px] font-mono">STANDAR EMVCo</span>
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-[9px] font-bold text-slate-500 mt-2 tracking-wide uppercase">
+                    Scan Menggunakan Mobile Banking / e-Wallet
+                  </span>
+                </div>
+
+                {/* ASPI & BI Footer */}
+                <div className="bg-slate-100 px-3 py-2 border-t border-slate-200 text-center">
+                  <div className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">
+                    Dicetak oleh: OCTO Merchant Solutions
+                  </div>
+                  <div className="text-[8px] font-extrabold text-slate-700 mt-0.5">
+                    ASPI • GPN • BANK INDONESIA
+                  </div>
+                </div>
+              </div>
+
+              {/* Bank Transfer Details Box with Copy Button */}
+              <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 space-y-2.5">
+                <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                  <span className="flex items-center gap-1.5">
+                    <Building className="w-3.5 h-3.5 text-[#00AFC4]" />
+                    <span>Rekening Transfer Resmi PT</span>
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full bg-slate-200/80 text-[10px] font-bold text-slate-800">
+                    {bankName || 'BCA'}
+                  </span>
+                </div>
+
+                <div className="p-3 bg-white rounded-xl border border-slate-200 flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] text-slate-400 block font-semibold">Nomor Rekening:</span>
+                    <span className="font-mono text-sm font-black text-slate-900 tracking-wider">
+                      {bankAccountNumber || '880129994012'}
+                    </span>
+                    <span className="text-[10px] text-slate-500 block mt-0.5">
+                      a/n <strong>{bankAccountHolder || 'PT Maju Bersama Solusindo'}</strong>
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(bankAccountNumber || '880129994012');
+                      setCopiedBankPreview(true);
+                      setTimeout(() => setCopiedBankPreview(false), 2000);
+                    }}
+                    className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl text-xs font-bold flex items-center gap-1 transition cursor-pointer shrink-0"
+                  >
+                    {copiedBankPreview ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Tersalin!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5 text-emerald-700" />
+                        <span>Salin Rekening</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Workflow Explainer */}
+              <div className="p-3.5 bg-teal-50/60 rounded-xl border border-teal-100 text-[11px] text-teal-900 space-y-1.5 leading-relaxed">
+                <div className="font-bold flex items-center gap-1 text-[#00AFC4]">
+                  <span>💡 Alur Transaksi Invoices:</span>
+                </div>
+                <p>
+                  1. Setiap tagihan yang dibuat di menu <strong>Invoices</strong> otomatis menyajikan kartu QRIS dan rekening bank resmi di atas.
+                </p>
+                <p>
+                  2. Klien dapat membuka invoice dari tautan WhatsApp, lalu scan QRIS atau transfer via m-Banking.
+                </p>
+                <p>
+                  3. Dana langsung masuk ke rekening bank perusahaan tanpa perantara pihak ketiga.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -864,5 +864,137 @@ export interface AutomationLog {
   created_at: string;
 }
 
+// ==============================================================================
+// Sales Commission & War Room Types
+// ==============================================================================
+
+export interface SalesCommissionPlan {
+  id: string;
+  workspace_id: string;
+  name: string;
+  calculation_type: 'percentage_deal' | 'fixed_amount' | 'tiered_threshold';
+  base_rate: number;
+  threshold_amount: number;
+  bonus_rate: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateCommissionPlanRequest {
+  name: string;
+  calculation_type: 'percentage_deal' | 'fixed_amount' | 'tiered_threshold';
+  base_rate: number;
+  threshold_amount?: number;
+  bonus_rate?: number;
+  is_active?: boolean;
+}
+
+export interface SalesCommission {
+  id: string;
+  workspace_id: string;
+  user_id: string;
+  deal_id?: string;
+  invoice_id?: string;
+  plan_id?: string;
+  deal_title: string;
+  deal_amount: number;
+  commission_rate: number;
+  commission_amount: number;
+  status: 'pending' | 'approved' | 'paid_in_payroll' | 'rejected';
+  period: string;
+  approved_by?: string;
+  approved_at?: string;
+  paid_payroll_slip_id?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+  user_name?: string;
+  user_email?: string;
+  plan_name?: string;
+}
+
+export interface CommissionSummary {
+  total_accrued: number;
+  total_pending: number;
+  total_approved: number;
+  total_paid_in_payroll: number;
+  top_earner_name: string;
+  top_earner_amount: number;
+}
+
+export interface WarRoomLeaderboardItem {
+  rank: number;
+  user_id: string;
+  full_name: string;
+  email: string;
+  avatar_url: string;
+  deals_won: number;
+  total_revenue: number;
+  total_commission: number;
+  target_amount: number;
+  achievement_percentage: number;
+}
+
+export interface RecentCelebration {
+  deal_id: string;
+  deal_title: string;
+  amount: number;
+  rep_name: string;
+  commission_amount: number;
+  closed_at: string;
+}
+
+export interface WarRoomStats {
+  period: string;
+  team_target: number;
+  total_revenue_won: number;
+  total_deals_won: number;
+  total_commission_accrued: number;
+  achievement_percentage: number;
+  leaderboard: WarRoomLeaderboardItem[];
+  recent_celebrations: RecentCelebration[];
+}
+
+export interface WorkspacePaymentSettings {
+  id: string;
+  workspace_id: string;
+  bank_name: string;
+  bank_account_number: string;
+  bank_account_holder: string;
+  qris_image_url: string;
+  qris_payload: string;
+  payment_gateway_provider: 'manual' | 'midtrans' | 'xendit' | 'autogopay' | string;
+  payment_gateway_client_key?: string;
+  payment_gateway_server_key?: string;
+  payment_gateway_is_production?: boolean;
+  autogopay_api_key?: string;
+  autogopay_merchant_name?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InvoiceQRISTransaction {
+  id: string;
+  workspace_id: string;
+  invoice_id: string;
+  provider: string;
+  transaction_id: string;
+  order_id: string;
+  amount: number;
+  qr_string: string;
+  qr_url: string;
+  checkout_url?: string;
+  status: string; // 'pending' | 'settlement' | 'expire' | 'cancel'
+  generate_count: number;
+  transaction_time: string;
+  expiry_time: string;
+  paid_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+
+
 
 

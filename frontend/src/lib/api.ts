@@ -48,6 +48,13 @@ import {
   CreateInvoiceRequest,
   AutomationWorkflow,
   AutomationLog,
+  SalesCommissionPlan,
+  CreateCommissionPlanRequest,
+  SalesCommission,
+  CommissionSummary,
+  WarRoomStats,
+  WorkspacePaymentSettings,
+  InvoiceQRISTransaction,
 } from '@/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
@@ -1179,6 +1186,94 @@ class ApiClient {
   async listDripLogs(wsId: string, limit: number = 50) {
     const res = await this.request<AutomationLog[]>(`/workspaces/${wsId}/drip-automations/logs?limit=${limit}`);
     return res ?? [];
+  }
+
+  // ================= Sales Commission & War Room =================
+  async listCommissionPlans(wsId: string) {
+    const res = await this.request<SalesCommissionPlan[]>(`/workspaces/${wsId}/commissions/plans`);
+    return res ?? [];
+  }
+
+  async createCommissionPlan(wsId: string, data: CreateCommissionPlanRequest) {
+    return this.request<SalesCommissionPlan>(`/workspaces/${wsId}/commissions/plans`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateCommissionPlan(wsId: string, id: string, data: Partial<SalesCommissionPlan>) {
+    return this.request<SalesCommissionPlan>(`/workspaces/${wsId}/commissions/plans/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async listCommissions(wsId: string, params?: { period?: string; status?: string; user_id?: string }) {
+    const query = new URLSearchParams();
+    if (params?.period) query.append('period', params.period);
+    if (params?.status) query.append('status', params.status);
+    if (params?.user_id) query.append('user_id', params.user_id);
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+    const res = await this.request<SalesCommission[]>(`/workspaces/${wsId}/commissions${queryString}`);
+    return res ?? [];
+  }
+
+  async getCommissionSummary(wsId: string, period?: string) {
+    const query = period ? `?period=${period}` : '';
+    return this.request<CommissionSummary>(`/workspaces/${wsId}/commissions/summary${query}`);
+  }
+
+  async updateCommissionStatus(wsId: string, id: string, status: string, notes?: string) {
+    return this.request<{ message: string }>(`/workspaces/${wsId}/commissions/${id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status, notes }),
+    });
+  }
+
+  async getWarRoomStats(wsId: string, period?: string) {
+    const query = period ? `?period=${period}` : '';
+    return this.request<WarRoomStats>(`/workspaces/${wsId}/war-room/stats${query}`);
+  }
+
+  async setTeamTarget(wsId: string, data: { period: string; target_amount: number }) {
+    return this.request<{ message: string }>(`/workspaces/${wsId}/war-room/target`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // ================= Workspace Payment & QRIS Settings =================
+  async getPaymentSettings(wsId: string) {
+    return this.request<WorkspacePaymentSettings>(`/workspaces/${wsId}/payment-settings`);
+  }
+
+  async updatePaymentSettings(wsId: string, data: Partial<WorkspacePaymentSettings>) {
+    return this.request<WorkspacePaymentSettings>(
+      `/workspaces/${wsId}/payment-settings`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }
+    );
+  }
+
+  async uploadQRISImage(wsId: string, file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.request<{ url: string }>(`/workspaces/${wsId}/payment-settings/upload-qris`, {
+      method: 'POST',
+      body: formData,
+    });
+  }
+
+  async generateAutoGopayQRIS(wsId: string, invoiceId: string) {
+    return this.request<InvoiceQRISTransaction>(`/workspaces/${wsId}/invoices/${invoiceId}/autogopay-qris`, {
+      method: 'POST',
+    });
+  }
+
+  async checkAutoGopayQRISStatus(wsId: string, invoiceId: string) {
+    return this.request<InvoiceQRISTransaction>(`/workspaces/${wsId}/invoices/${invoiceId}/autogopay-status`);
   }
 }
 

@@ -1,8 +1,14 @@
 package handler
 
 import (
+	"fmt"
+	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
+	"time"
 
 	"octo-crm/backend/internal/domain"
 	"octo-crm/backend/internal/service"
@@ -181,4 +187,130 @@ func (h *CommercialOpsHandler) ListAutomationLogs(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"success": true, "data": logs})
+}
+
+// -----------------------------------------------------------------------------
+// Payment & QRIS Settings Handlers
+// -----------------------------------------------------------------------------
+
+func (h *CommercialOpsHandler) GetPaymentSettings(c *gin.Context) {
+	workspaceID := c.Param("workspace_id")
+	settings, err := h.svc.GetPaymentSettings(workspaceID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true, "data": settings})
+}
+
+func (h *CommercialOpsHandler) UpdatePaymentSettings(c *gin.Context) {
+	workspaceID := c.Param("workspace_id")
+	var req domain.UpdateWorkspacePaymentSettingsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": err.Error()})
+		return
+	}
+
+	settings, err := h.svc.UpdatePaymentSettings(workspaceID, req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "Pengaturan rekening dan QRIS perusahaan berhasil disimpan",
+		"data":    settings,
+	})
+}
+
+func (h *CommercialOpsHandler) UploadQRISImage(c *gin.Context) {
+	workspaceID := c.Param("workspace_id")
+	file, err := c.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "File gambar wajib diunggah"})
+		return
+	}
+
+	ext := strings.ToLower(filepath.Ext(file.Filename))
+	if ext != ".png" && ext != ".jpg" && ext != ".jpeg" && ext != ".webp" {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Format file harus berupa gambar (.png, .jpg, .jpeg, .webp)"})
+		return
+	}
+
+	uploadDir := filepath.Join(".", "uploads", "qris")
+	if err := os.MkdirAll(uploadDir, 0755); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Gagal membuat direktori upload: " + err.Error()})
+		return
+	}
+
+	fileName := fmt.Sprintf("%s_%d%s", workspaceID, time.Now().Unix(), ext)
+	dstPath := filepath.Join(uploadDir, fileName)
+
+	if err := c.SaveUploadedFile(file, dstPath); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Gagal menyimpan file: " + err.Error()})
+		return
+	}
+
+	fileURL := fmt.Sprintf("/uploads/qris/%s", fileName)
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "Gambar QRIS berhasil diunggah",
+		"url":     fileURL,
+		"data": gin.H{
+			"url": fileURL,
+		},
+	})
+}
+
+func (h *CommercialOpsHandler) GenerateAutoGopayQRIS(c *gin.Context) {
+	workspaceID := c.Param("workspace_id")
+	invoiceID := c.Param("id")
+
+	tx, err := h.svc.GenerateAutoGopayQRIS(workspaceID, invoiceID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "QRIS GoPay Merchant berhasil dibuat",
+		"data":    tx,
+	})
+}
+
+func (h *CommercialOpsHandler) CheckAutoGopayQRISStatus(c *gin.Context) {
+	workspaceID := c.Param("workspace_id")
+	invoiceID := c.Param("id")
+
+	tx, err := h.svc.CheckAutoGopayQRISStatus(workspaceID, invoiceID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    tx,
+	})
+}
+
+func (h *CommercialOpsHandler) HandleAutoGopayWebhook(c *gin.Context) {
+	workspaceID := c.Param("workspace_id")
+	signature := c.GetHeader("X-Signature")
+	eventHeader := c.GetHeader("X-Callback-Event")
+
+	body, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "gagal membaca body"})
+		return
+	}
+
+	if err := h.svc.HandleAutoGopayWebhook(workspaceID, body, signature, eventHeader); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true})
 }

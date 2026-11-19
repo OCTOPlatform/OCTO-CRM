@@ -546,3 +546,254 @@ Authorization: Bearer <JWT_TOKEN>
 ### 14.4 Riwayat Audit Eksekusi Otomasi (Logs)
 - **Metode:** `GET /api/v1/workspaces/:workspace_id/drip-automations/logs?limit=50`
 - **Response `200 OK`:** Menghasilkan rekap log eksekusi follow-up dan stempel waktu.
+
+---
+
+## 15. Modul Komisi Penjualan & Live Sales War-Room (`/commissions` & `/war-room`)
+
+### 15.1 Daftar & Pembuatan Skema Komisi (Commission Plans)
+- **Metode:** `GET /api/v1/workspaces/:workspace_id/commissions/plans`
+- **Response `200 OK`:** Menampilkan seluruh skema aturan komisi aktif dan non-aktif.
+
+- **Metode:** `POST /api/v1/workspaces/:workspace_id/commissions/plans`
+- **Request Body:**
+  ```json
+  {
+    "name": "Skema Insentif Juara 2026",
+    "calculation_type": "tiered_threshold",
+    "base_rate": 3.5,
+    "threshold_amount": 50000000,
+    "bonus_rate": 6.0,
+    "is_active": true
+  }
+  ```
+- **Response `201 Created`:** Mengembalikan objek skema komisi baru.
+
+### 15.2 Daftar Transaksi Komisi & Approval
+- **Metode:** `GET /api/v1/workspaces/:workspace_id/commissions`
+- **Query Params:** `period` (e.g. `2026-11`), `status` (`pending`, `approved`, `paid_in_payroll`, `rejected`), `user_id`
+- **Response `200 OK`:** Mengembalikan array transaksi komisi lengkap dengan relasi nama sales rep, email, deal closing, nilai deal, persentase rate, dan komisi diterima.
+
+- **Metode:** `PUT /api/v1/workspaces/:workspace_id/commissions/:id/status`
+- **Request Body:**
+  ```json
+  {
+    "status": "approved",
+    "notes": "Disetujui oleh Sales Director"
+  }
+  ```
+- **Response `200 OK`:** Memperbarui status komisi dan mencatat siapa approver-nya.
+
+### 15.3 Ringkasan Komisi Finansial
+- **Metode:** `GET /api/v1/workspaces/:workspace_id/commissions/summary?period=2026-11`
+- **Response `200 OK`:**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "total_accrued": 25000000,
+      "total_pending": 5000000,
+      "total_approved": 20000000,
+      "total_paid_in_payroll": 0,
+      "top_earner_name": "Budi Santoso",
+      "top_earner_amount": 12500000
+    }
+  }
+  ```
+
+### 15.4 Statistik & Klasemen Siar War-Room TV
+- **Metode:** `GET /api/v1/workspaces/:workspace_id/war-room/stats?period=2026-11`
+- **Response `200 OK`:**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "period": "2026-11",
+      "team_target": 250000000,
+      "total_revenue_won": 210000000,
+      "total_deals_won": 8,
+      "total_commission_accrued": 10500000,
+      "achievement_percentage": 84.0,
+      "leaderboard": [
+        {
+          "rank": 1,
+          "user_id": "user-uuid-1",
+          "full_name": "Budi Santoso",
+          "deals_won": 5,
+          "total_revenue": 140000000,
+          "total_commission": 7000000,
+          "achievement_percentage": 112.0
+        }
+      ],
+      "recent_celebrations": [
+        {
+          "deal_id": "deal-uuid-1",
+          "deal_title": "Implementasi Enterprise OCTO",
+          "amount": 25000000,
+          "rep_name": "Budi Santoso",
+          "commission_amount": 750000,
+          "closed_at": "2026-11-19T10:30:00Z"
+        }
+      ]
+    }
+  }
+  ```
+
+### 15.5 Pengaturan Target Omset Tim
+- **Metode:** `POST /api/v1/workspaces/:workspace_id/war-room/target`
+- **Request Body:**
+  ```json
+  {
+    "period": "2026-11",
+    "target_amount": 250000000
+  }
+  ```
+- **Response `200 OK`:** Target omset tim tersimpan dan langsung tercermin di visual gauge War-Room.
+
+---
+
+## 16. Endpoint Rekening Bank Perusahaan & QRIS Standar Nasional
+
+Kanal terpusat untuk membaca dan mengonfigurasi nomor rekening perbankan resmi perusahaan dan barcode QRIS Standar Nasional (ASPI / Bank Indonesia) yang otomatis diintegrasikan ke modul penagihan faktur (invoices).
+
+### 16.1 Mendapatkan Pengaturan Rekening & QRIS Perusahaan
+- **Metode:** `GET /api/v1/workspaces/:workspace_id/payment-settings`
+- **Header:** `Authorization: Bearer <jwt_token>`
+- **Response `200 OK`:**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "id": "77f72236-ecbf-41a3-b452-f4ee0b3b4291",
+      "workspace_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      "bank_name": "BCA",
+      "bank_account_number": "880129994012",
+      "bank_account_holder": "PT Maju Bersama Solusindo",
+      "qris_image_url": "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=00020101021126600016ID.CO.QRIS.WWW...",
+      "qris_payload": "00020101021126600016ID.CO.QRIS.WWW01189360052300000123455204599953033605802ID5924PT MAJU BERSAMA SOLUSIN6007JAKARTA61051011062070703A0163045E1A",
+      "payment_gateway_provider": "manual",
+      "payment_gateway_client_key": "",
+      "payment_gateway_server_key": "",
+      "payment_gateway_is_production": false,
+      "created_at": "2026-11-19T10:00:00Z",
+      "updated_at": "2026-11-19T10:00:00Z"
+    }
+  }
+  ```
+
+### 16.2 Menyimpan / Memperbarui Rekening Bank & QRIS
+- **Metode:** `PUT /api/v1/workspaces/:workspace_id/payment-settings`
+- **Header:** `Authorization: Bearer <jwt_token>`, `Content-Type: application/json`
+- **Akses:** Khusus role `owner`, `admin`, `supervisor`, atau `is_superadmin`.
+- **Request Body:**
+  ```json
+  {
+    "bank_name": "BCA",
+    "bank_account_number": "880129994012",
+    "bank_account_holder": "PT Maju Bersama Solusindo Tbk",
+    "qris_image_url": "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=00020101021126600016ID.CO.QRIS.WWW...",
+    "qris_payload": "00020101021126600016ID.CO.QRIS.WWW01189360052300000123455204599953033605802ID5924PT MAJU BERSAMA SOLUSIN6007JAKARTA61051011062070703A0163045E1A",
+    "payment_gateway_provider": "manual",
+    "payment_gateway_client_key": "",
+    "payment_gateway_server_key": "",
+    "payment_gateway_is_production": false
+  }
+  ```
+- **Response `200 OK`:**
+  ```json
+  {
+    "success": true,
+    "message": "Pengaturan rekening dan QRIS perusahaan berhasil disimpan",
+    "data": {
+      "id": "77f72236-ecbf-41a3-b452-f4ee0b3b4291",
+      "workspace_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      "bank_name": "BCA",
+      "bank_account_number": "880129994012",
+      "bank_account_holder": "PT Maju Bersama Solusindo Tbk",
+      "qris_image_url": "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=...",
+      "qris_payload": "...",
+      "payment_gateway_provider": "manual",
+      "updated_at": "2026-11-19T10:35:00Z"
+    }
+  }
+  ```
+
+---
+
+## 17. Integrasi AutoGoPay (GoPay Merchant Dynamic QRIS)
+
+### 17.1 Generate Dynamic QRIS Sesi AutoGoPay
+- **Metode:** `POST /api/v1/workspaces/:workspace_id/invoices/:id/autogopay-qris`
+- **Header:** `Authorization: Bearer <jwt_token>`
+- **Deskripsi:** Menerbitkan sesi QRIS Dinamis unik dengan nominal terkunci presisi sesuai total tagihan invoice. Menerapkan anti-spam: menggunakan kembali sesi aktif yang masih berlaku (<15 menit) dan membatasi regenerasi maksimal 2 kali per invoice.
+- **Response `200 OK`:**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "id": "cefa51b3-9a70-4170-b575-844a5e26647c",
+      "workspace_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      "invoice_id": "e7ba122f-73e7-4864-87ea-c06b5380f905",
+      "provider": "autogopay",
+      "transaction_id": "AGP-TRX-1729381",
+      "order_id": "ORD-GP-1795102537-e7ba",
+      "amount": 3607500,
+      "qr_string": "00020101021226610014COM.GO-JEK.WWW011893600898000000000002150000000000000005204581253033605802ID5920GOPAY MERCHANT...",
+      "qr_url": "https://api.qrserver.com/v1/create-qr-code/?size=350x350&data=...",
+      "checkout_url": "https://autogopay.site/pay/AGP-TRX-1729381",
+      "status": "pending",
+      "generate_count": 1,
+      "transaction_time": "2026-11-19T22:35:37Z",
+      "expiry_time": "2026-11-19T22:50:37Z",
+      "paid_at": null,
+      "created_at": "2026-11-19T22:35:37Z",
+      "updated_at": "2026-11-19T22:35:37Z"
+    }
+  }
+  ```
+
+### 17.2 Polling Status Transaksi QRIS AutoGoPay
+- **Metode:** `GET /api/v1/workspaces/:workspace_id/invoices/:id/autogopay-status`
+- **Header:** `Authorization: Bearer <jwt_token>`
+- **Deskripsi:** Endpoint auto-poller yang dipanggil frontend setiap 3-4 detik. Mengembalikan status transaksi (`pending`, `settlement`, `expire`).
+- **Response `200 OK`:**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "transaction_id": "AGP-TRX-1729381",
+      "order_id": "ORD-GP-1795102537-e7ba",
+      "status": "settlement",
+      "paid_at": "2026-11-19T22:37:00Z"
+    }
+  }
+  ```
+
+### 17.3 Webhook Callback Notifikasi AutoGoPay
+- **Metode:** `POST /api/v1/workspaces/:workspace_id/integrations/autogopay/webhook`
+- **Header:** 
+  - `Content-Type: application/json`
+  - `X-Signature: <hmac_sha256_hex_digest>` (Enkripsi HMAC-SHA256 dari payload JSON menggunakan AutoGoPay API Key sebagai secret)
+- **Deskripsi:** Dipanggil secara real-time oleh server gateway AutoGoPay saat pembayaran dari aplikasi perbankan atau e-wallet diterima. Sistem memvalidasi `X-Signature`, menandai invoice menjadi `PAID`, memotong stok inventori secara otomatis, dan memperbarui peluang Deal menjadi `WON`.
+- **Request Body:**
+  ```json
+  {
+    "event": "PAYMENT_RECEIVED",
+    "transaction": {
+      "order_id": "ORD-GP-1795102537-e7ba",
+      "transaction_id": "TX-GP-1729381",
+      "gross_amount": 3607500,
+      "status": "settlement",
+      "payment_type": "qris",
+      "transaction_time": "2026-11-19 22:37:00"
+    }
+  }
+  ```
+- **Response `200 OK`:**
+  ```json
+  {
+    "success": true,
+    "message": "AutoGoPay webhook processed successfully"
+  }
+  ```
+

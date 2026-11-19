@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth, formatCurrencyIDR } from '@/lib/auth-context';
 import { api } from '@/lib/api';
 import Navbar from '@/components/layout/Navbar';
-import { Invoice, Product, Contact, Deal } from '@/types';
+import { Invoice, Product, Contact, Deal, WorkspacePaymentSettings, InvoiceQRISTransaction } from '@/types';
 import {
   Receipt,
   FileText,
@@ -23,6 +23,11 @@ import {
   Send,
   Building,
   User as UserIcon,
+  Copy,
+  Check,
+  Sparkles,
+  ExternalLink,
+  RefreshCw,
 } from 'lucide-react';
 
 export default function InvoicesPage() {
@@ -31,7 +36,16 @@ export default function InvoicesPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [deals, setDeals] = useState<Deal[]>([]);
+  const [paymentSettings, setPaymentSettings] = useState<WorkspacePaymentSettings | null>(null);
+  const [payMethodTab, setPayMethodTab] = useState<'qris' | 'bank'>('qris');
+  const [copiedBankInvoice, setCopiedBankInvoice] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // AutoGoPay Dynamic QRIS State
+  const [dynamicQrisTx, setDynamicQrisTx] = useState<InvoiceQRISTransaction | null>(null);
+  const [loadingDynamicQris, setLoadingDynamicQris] = useState(false);
+  const [dynamicQrisError, setDynamicQrisError] = useState<string | null>(null);
+  const [timeRemaining, setTimeRemaining] = useState<number>(0);
 
   // Filters
   const [typeFilter, setTypeFilter] = useState<'all' | 'invoice' | 'quotation'>('all');
@@ -81,16 +95,20 @@ export default function InvoicesPage() {
     if (!currentWorkspace) return;
     try {
       setLoading(true);
-      const [invData, prodData, contactData, dealData] = await Promise.all([
+      const [invData, prodData, contactData, dealData, payData] = await Promise.all([
         api.listInvoices(currentWorkspace.id, typeFilter, statusFilter),
         api.listProducts(currentWorkspace.id),
         api.listContacts(currentWorkspace.id),
         api.listDeals(currentWorkspace.id),
+        api.getPaymentSettings(currentWorkspace.id).catch(() => null),
       ]);
       setInvoices(invData);
       setProducts(prodData);
       setContacts(contactData || []);
       setDeals(dealData || []);
+      if (payData) {
+        setPaymentSettings(payData);
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -102,7 +120,92 @@ export default function InvoicesPage() {
     loadData();
   }, [currentWorkspace, typeFilter, statusFilter]);
 
+  // AutoGoPay Dynamic QRIS Poller & Session Manager
+  useEffect(() => {
+    let intervalId: any = null;
+    if (showPayModal && selectedInvoice && paymentSettings?.payment_gateway_provider === 'autogopay') {
+      setLoadingDynamicQris(true);
+      setDynamicQrisError(null);
+
+      const fetchQRIS = async () => {
+        try {
+          const tx = await api.generateAutoGopayQRIS(currentWorkspace!.id, selectedInvoice.id);
+          setDynamicQrisTx(tx);
+          setLoadingDynamicQris(false);
+
+          if (tx.status === 'settlement') {
+            return;
+          }
+
+          intervalId = setInterval(async () => {
+            try {
+              const check = await api.checkAutoGopayQRISStatus(currentWorkspace!.id, selectedInvoice.id);
+              if (check.status === 'settlement') {
+                clearInterval(intervalId);
+                setDynamicQrisTx(check);
+              }
+            } catch (err) {
+              console.error('AutoGoPay status check error:', err);
+            }
+          }, 3000);
+        } catch (err: any) {
+          setDynamicQrisError(err.message || 'Gagal menghasilkan QRIS AutoGoPay');
+          setLoadingDynamicQris(false);
+        }
+      };
+
+      fetchQRIS();
+    } else {
+      setDynamicQrisTx(null);
+      setDynamicQrisError(null);
+      setTimeRemaining(0);
+    }
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [showPayModal, selectedInvoice?.id, paymentSettings?.payment_gateway_provider]);
+
+  // Expiration countdown timer for AutoGoPay (15-min limit)
+  useEffect(() => {
+    if (!dynamicQrisTx || !dynamicQrisTx.expiry_time || dynamicQrisTx.status === 'settlement') {
+      return;
+    }
+
+    const updateTimer = () => {
+      const expiry = new Date(dynamicQrisTx.expiry_time).getTime();
+      const now = Date.now();
+      const diff = Math.max(0, Math.floor((expiry - now) / 1000));
+      setTimeRemaining(diff);
+    };
+
+    updateTimer();
+    const timer = setInterval(updateTimer, 1000);
+    return () => clearInterval(timer);
+  }, [dynamicQrisTx]);
+
+  const formatTimer = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
   // Handle Item Row Changes
+  const getFullQrisUrl = (url?: string, payload?: string) => {
+    if (url) {
+      if (url.startsWith('http://') || url.startsWith('https://')) return url;
+      const backendOrigin =
+        typeof window !== 'undefined'
+          ? `${window.location.protocol}//${window.location.host.replace(':3000', ':8080')}`
+          : 'http://localhost:8080';
+      return `${backendOrigin}${url.startsWith('/') ? '' : '/'}${url}`;
+    }
+    const defaultPayload =
+      payload ||
+      `00020101021126600016ID.CO.QRIS.WWW01189360052300000123455204599953033605802ID5924${(paymentSettings?.bank_account_holder || currentWorkspace?.name || 'PT MAJU BERSAMA').slice(0, 24).toUpperCase()}6007JAKARTA61051011062070703A0163045E1A`;
+    return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(defaultPayload)}`;
+  };
+
   const handleItemProductSelect = (index: number, productId: string) => {
     const prod = products.find((p) => p.id === productId);
     const updated = [...formItems];
@@ -906,17 +1009,22 @@ export default function InvoicesPage() {
               </div>
             </div>
 
-            {/* Payment Details / QRIS Simulator Box */}
-            <div className="p-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl border border-emerald-200/80 flex items-center justify-between text-xs">
+            {/* Payment Details / Official Company Bank & QRIS Box */}
+            <div className="p-4 bg-gradient-to-r from-emerald-50 via-teal-50 to-slate-50 rounded-2xl border border-emerald-200/80 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs">
               <div className="space-y-1">
-                <strong className="text-emerald-950 flex items-center gap-1.5">
+                <strong className="text-emerald-950 flex items-center gap-1.5 font-bold">
                   <CreditCard className="w-4 h-4 text-emerald-700" />
-                  <span>Kanal Pembayaran Otomatis</span>
+                  <span>Instruksi Pembayaran Resmi Perusahaan:</span>
                 </strong>
-                <p className="text-[11px] text-emerald-800">
-                  Metode: <strong>{selectedInvoice.payment_method?.toUpperCase()}</strong> | Ref: {selectedInvoice.payment_reference || 'QRIS-OCTO-LIVE'}
+                <p className="text-[11px] text-slate-700">
+                  Bank: <strong className="text-slate-900">{paymentSettings?.bank_name || 'BCA'}</strong> • No. Rekening: <span className="font-mono font-bold text-slate-900">{paymentSettings?.bank_account_number || '880129994012'}</span>
                 </p>
-                <p className="text-[10px] text-emerald-700">Dukungan QRIS Nasional, BCA VA, Mandiri VA, dan e-Wallet</p>
+                <p className="text-[11px] text-slate-600">
+                  Atas Nama: <strong className="text-slate-900">{paymentSettings?.bank_account_holder || currentWorkspace?.name || 'PT Maju Bersama Solusindo'}</strong>
+                </p>
+                <p className="text-[10px] text-emerald-700">
+                  Dukungan QRIS Standar Nasional (ASPI/BI), BCA, Livin&apos; Mandiri, BRImo, BNI &amp; Seluruh e-Wallet.
+                </p>
               </div>
 
               {selectedInvoice.status !== 'paid' && (
@@ -926,9 +1034,10 @@ export default function InvoicesPage() {
                     setShowDetailModal(false);
                     setShowPayModal(true);
                   }}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition cursor-pointer"
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition cursor-pointer flex items-center gap-1.5 shrink-0"
                 >
-                  Bayar Sekarang
+                  <QrCode className="w-3.5 h-3.5" />
+                  <span>Bayar via QRIS / Rekening PT</span>
                 </button>
               )}
             </div>
@@ -957,51 +1066,279 @@ export default function InvoicesPage() {
         </div>
       )}
 
-      {/* ================= MODAL: PAYMENT GATEWAY SIMULATION (QRIS / VA) ================= */}
+      {/* ================= MODAL: PAYMENT GATEWAY & QRIS NASIONAL ================= */}
       {showPayModal && selectedInvoice && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-5 text-center">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-5 text-center max-h-[92vh] overflow-y-auto">
             <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-              <strong className="text-sm font-black text-[#142740]">Payment Gateway Simulation</strong>
+              <div className="flex items-center gap-2 text-left">
+                <CreditCard className="w-4 h-4 text-emerald-600" />
+                <strong className="text-sm font-black text-[#142740]">Pembayaran Tagihan Resmi Perusahaan</strong>
+              </div>
               <button onClick={() => setShowPayModal(false)} className="text-slate-400 hover:text-slate-600">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="space-y-2">
-              <span className="px-3 py-1 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 uppercase tracking-wider">
-                QRIS & Virtual Account Live Gateway
+            <div className="space-y-1 bg-slate-50 p-3 rounded-2xl border border-slate-200/80">
+              <span className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">
+                Total Tagihan Invoice
               </span>
-              <h3 className="text-xl font-black text-[#142740]">
+              <h3 className="text-2xl font-black text-emerald-700">
                 {formatCurrencyIDR(selectedInvoice.total_amount)}
               </h3>
-              <p className="text-xs text-slate-500">
-                Invoice <strong>{selectedInvoice.invoice_number}</strong> ({selectedInvoice.contact_name || 'Klien'})
+              <p className="text-xs text-slate-600">
+                Invoice <strong className="font-mono text-slate-800">{selectedInvoice.invoice_number}</strong> • {selectedInvoice.contact_name || 'Klien Pelanggan'}
               </p>
             </div>
 
-            {/* Simulated QR Code Visual */}
-            <div className="p-6 bg-slate-50 rounded-2xl border border-slate-200 inline-block mx-auto relative group">
-              <div className="w-44 h-44 bg-white p-3 rounded-xl border border-slate-300 shadow-inner flex flex-col items-center justify-center space-y-2">
-                <QrCode className="w-28 h-28 text-slate-800" />
-                <span className="text-[10px] font-mono font-bold text-slate-500">QRIS STANDAR NASIONAL</span>
-              </div>
+            {/* Payment Method Switcher Tabs */}
+            <div className="flex bg-slate-100 p-1 rounded-xl gap-1">
+              <button
+                type="button"
+                onClick={() => setPayMethodTab('qris')}
+                className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                  payMethodTab === 'qris'
+                    ? 'bg-white text-emerald-800 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <QrCode className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Scan QRIS Nasional</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPayMethodTab('bank')}
+                className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                  payMethodTab === 'bank'
+                    ? 'bg-white text-[#142740] shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Building className="w-3.5 h-3.5 text-[#00AFC4]" />
+                <span>Transfer Bank PT</span>
+              </button>
             </div>
 
-            <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-left text-xs space-y-1">
-              <div className="flex justify-between text-slate-500">
-                <span>Metode Pembayaran:</span>
-                <strong className="text-slate-800">{selectedInvoice.payment_method?.toUpperCase()}</strong>
+            {/* TAB 1: Scannable QRIS (AutoGoPay Dynamic or Standard Static) */}
+            {payMethodTab === 'qris' && (
+              <div className="space-y-3">
+                {paymentSettings?.payment_gateway_provider === 'autogopay' ? (
+                  /* AutoGoPay Dynamic QRIS Container */
+                  <div className="space-y-3">
+                    {loadingDynamicQris ? (
+                      <div className="p-8 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col items-center justify-center space-y-3">
+                        <RefreshCw className="w-8 h-8 text-emerald-600 animate-spin" />
+                        <div className="text-center">
+                          <p className="text-xs font-bold text-slate-800">Menghubungkan ke AutoGoPay Gateway...</p>
+                          <p className="text-[11px] text-slate-500">Menerbitkan QRIS dinamis resmi GoPay Merchant</p>
+                        </div>
+                      </div>
+                    ) : dynamicQrisError ? (
+                      <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-rose-800 space-y-2 text-left">
+                        <div className="flex items-center gap-2 font-bold text-xs">
+                          <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                          <span>Gagal Membuat Sesi QRIS AutoGoPay</span>
+                        </div>
+                        <p className="text-[11px]">{dynamicQrisError}</p>
+                        <p className="text-[10px] text-rose-600/80">
+                          Pastikan API Key AutoGoPay sudah diatur di menu Pengaturan &gt; Rekening &amp; QRIS.
+                        </p>
+                      </div>
+                    ) : dynamicQrisTx ? (
+                      <div className="bg-white rounded-2xl border-2 border-slate-300 overflow-hidden shadow-sm inline-block w-full max-w-sm mx-auto text-left">
+                        {/* AutoGoPay Official Red/Emerald Header */}
+                        <div className="bg-gradient-to-r from-[#ED1C24] to-emerald-700 text-white px-3 py-2 text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <span className="font-black text-base tracking-wider leading-none">QRIS</span>
+                            <span className="text-[9px] bg-white text-slate-900 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+                              Dynamic GoPay
+                            </span>
+                          </div>
+                          <div className="text-[7.5px] font-bold tracking-widest uppercase opacity-95 mt-0.5">
+                            AutoGoPay Merchant • Nominal Presisi Otomatis
+                          </div>
+                        </div>
+
+                        {/* Merchant & Order ID */}
+                        <div className="px-3 py-2 text-center border-b border-slate-100 bg-slate-50/70">
+                          <div className="font-black text-xs text-slate-900 uppercase truncate">
+                            {paymentSettings?.autogopay_merchant_name || paymentSettings?.bank_account_holder || currentWorkspace?.name || 'GoPay Merchant'}
+                          </div>
+                          <div className="flex items-center justify-center gap-1.5 text-[8.5px] font-mono text-slate-500 mt-0.5">
+                            <span>Order: {dynamicQrisTx.order_id}</span>
+                            <span>•</span>
+                            <span>Sesi #{dynamicQrisTx.generate_count}/2</span>
+                          </div>
+                        </div>
+
+                        {/* Status & Expiration Banner */}
+                        <div className="px-3 py-1.5 text-center border-b border-slate-100">
+                          {dynamicQrisTx.status === 'settlement' ? (
+                            <div className="inline-flex items-center gap-1 text-[11px] font-extrabold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>PEMBAYARAN LUNAS / SETTLEMENT</span>
+                            </div>
+                          ) : timeRemaining <= 0 ? (
+                            <div className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-700 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200">
+                              <AlertCircle className="w-3 h-3" />
+                              <span>Sesi QRIS Kedaluwarsa (15 Menit)</span>
+                            </div>
+                          ) : (
+                            <div className="inline-flex items-center gap-1.5 text-[10px] font-bold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
+                              <Clock className="w-3 h-3 animate-spin text-amber-600" />
+                              <span>Batas Waktu: <strong>{formatTimer(timeRemaining)}</strong></span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Scannable Dynamic QR Code Image */}
+                        <div className="p-3 bg-white flex flex-col items-center justify-center">
+                          <div className="w-48 h-48 bg-white p-2 rounded-xl border border-slate-200 shadow-inner flex items-center justify-center">
+                            <img
+                              src={dynamicQrisTx.qr_url || `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(dynamicQrisTx.qr_string)}`}
+                              alt="AutoGoPay Dynamic QRIS"
+                              className="w-full h-full object-contain"
+                            />
+                          </div>
+                          <div className="mt-2 text-center">
+                            <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full">
+                              Rp {formatCurrencyIDR(dynamicQrisTx.amount)} (Tepat Presisi)
+                            </span>
+                            <p className="text-[8.5px] font-bold text-slate-500 mt-1.5 tracking-wide uppercase">
+                              Scan via BCA Mobile • Mandiri • BRImo • GoPay • OVO • DANA • ShopeePay
+                            </p>
+                          </div>
+
+                          {dynamicQrisTx.checkout_url && (
+                            <a
+                              href={dynamicQrisTx.checkout_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="mt-2 text-[10px] text-emerald-700 hover:text-emerald-800 font-bold flex items-center gap-1 bg-emerald-50/80 hover:bg-emerald-100 px-3 py-1 rounded-lg transition"
+                            >
+                              <span>Buka Halaman Checkout GoPay</span>
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          )}
+                        </div>
+
+                        {/* ASPI Footer with auto-poller note */}
+                        <div className="bg-slate-100 px-3 py-1.5 border-t border-slate-200 flex items-center justify-between text-[7.5px] font-bold text-slate-600">
+                          <span>ASPI • GPN • GOPAY GATEWAY</span>
+                          <span className="flex items-center gap-1 text-emerald-700">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            <span>Auto-Poller Aktif</span>
+                          </span>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  /* Standard Static QRIS Standar Nasional */
+                  <div className="bg-white rounded-2xl border-2 border-slate-300 overflow-hidden shadow-sm inline-block w-full max-w-sm mx-auto text-left">
+                    {/* ASPI Official Red Header */}
+                    <div className="bg-[#ED1C24] text-white px-3 py-2 text-center">
+                      <div className="font-black text-base tracking-wider leading-none">QRIS</div>
+                      <div className="text-[7.5px] font-bold tracking-widest uppercase opacity-95 mt-0.5">
+                        Quick Response Code Indonesian Standard
+                      </div>
+                    </div>
+
+                    {/* Merchant & NMID */}
+                    <div className="px-3 py-2 text-center border-b border-slate-100 bg-slate-50/50">
+                      <div className="font-black text-xs text-slate-900 uppercase truncate">
+                        {paymentSettings?.bank_account_holder || currentWorkspace?.name || 'PT Maju Bersama Solusindo'}
+                      </div>
+                      <div className="text-[8.5px] font-mono font-semibold text-slate-400 mt-0.5">
+                        NMID: ID1020039281921 • Standard BI
+                      </div>
+                    </div>
+
+                    {/* Scannable Real QR Code Image */}
+                    <div className="p-3 bg-white flex flex-col items-center justify-center">
+                      <div className="w-44 h-44 bg-white p-2 rounded-xl border border-slate-200 shadow-inner flex items-center justify-center">
+                        <img
+                          src={getFullQrisUrl(paymentSettings?.qris_image_url, paymentSettings?.qris_payload)}
+                          alt="QRIS Barcode Standar Nasional"
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                      <span className="text-[8.5px] font-bold text-slate-500 mt-2 tracking-wide uppercase text-center">
+                        Scan via Livin&apos; Mandiri • BCA Mobile • BRImo • GoPay • OVO • DANA • ShopeePay
+                      </span>
+                    </div>
+
+                    {/* ASPI Footer */}
+                    <div className="bg-slate-100 px-3 py-1.5 border-t border-slate-200 text-center">
+                      <div className="text-[7.5px] font-extrabold text-slate-700">
+                        ASPI • GPN • BANK INDONESIA
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className="flex justify-between text-slate-500">
-                <span>No. Referensi / VA:</span>
-                <strong className="font-mono text-emerald-700">
-                  {selectedInvoice.payment_reference || '880129994012'}
-                </strong>
+            )}
+
+            {/* TAB 2: Transfer Bank Langsung */}
+            {payMethodTab === 'bank' && (
+              <div className="space-y-3 text-left">
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-500 font-semibold">Bank Tujuan:</span>
+                    <strong className="text-sm font-black text-[#142740]">
+                      {paymentSettings?.bank_name || 'Bank Central Asia (BCA)'}
+                    </strong>
+                  </div>
+
+                  <div className="p-3 bg-white rounded-xl border border-slate-200 flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] text-slate-400 block font-semibold">Nomor Rekening PT:</span>
+                      <span className="font-mono text-base font-black text-slate-900 tracking-wider">
+                        {paymentSettings?.bank_account_number || '880129994012'}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(paymentSettings?.bank_account_number || '880129994012');
+                        setCopiedBankInvoice(true);
+                        setTimeout(() => setCopiedBankInvoice(false), 2000);
+                      }}
+                      className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl text-xs font-bold flex items-center gap-1 transition cursor-pointer"
+                    >
+                      {copiedBankInvoice ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Tersalin!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5 text-emerald-700" />
+                          <span>Salin No. Rek</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-500 font-semibold">Atas Nama (Penerima):</span>
+                    <strong className="text-xs font-bold text-slate-800 text-right">
+                      {paymentSettings?.bank_account_holder || currentWorkspace?.name || 'PT Maju Bersama Solusindo'}
+                    </strong>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-teal-50 rounded-xl border border-teal-100 text-[11px] text-teal-800">
+                  ⚡ Transfer langsung masuk ke rekening operasional resmi PT tanpa potongan biaya administrasi pihak ketiga.
+                </div>
               </div>
-              <div className="text-[10px] text-slate-400 pt-1">
-                ⚡ Mengonfirmasi lunas akan otomatis memotong stok produk di gudang & mengubah Deal ke status Won.
-              </div>
+            )}
+
+            {/* Note & Confirmation */}
+            <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-left text-[11px] text-slate-500">
+              Mengonfirmasi pembayaran lunas akan otomatis memperbarui status Invoice menjadi <strong>PAID</strong>, memotong stok gudang, dan memindahkan Deal terkait ke <strong>WON</strong>.
             </div>
 
             <button

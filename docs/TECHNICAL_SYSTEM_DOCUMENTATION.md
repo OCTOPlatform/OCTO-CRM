@@ -238,6 +238,138 @@ flowchart TD
     WAHA --> LOGS
 ```
 
+### 5.5 Arsitektur Sales Commission Engine & Live Sales War-Room (Migration 000018)
+
+Modul ini mengotomatiskan pemberian reward komisi kepada tenaga penjualan secara tertutup (*closed-loop*) dari deal closing, pembayaran invoice QRIS, integrasi langsung ke slip gaji bulanan, hingga visualisasi real-time pada TV siar kantor (*Sales War-Room*).
+
+```mermaid
+flowchart TD
+    subgraph CRM_Sales["Peluang Penjualan (CRM Deals)"]
+        DEAL["Deal Closing (WON)"]
+    end
+
+    subgraph Commercial["Invoicing & Pembayaran QRIS"]
+        INV["Invoice Pelanggan"]
+        QRIS["QRIS / Virtual Account (PAID)"]
+    end
+
+    subgraph Commission_Engine["Sales Commission Engine"]
+        PLAN["Sales Commission Plan (Tiered / Flat)"]
+        CALC["Auto-Calculate Commission"]
+        COMM_DB[("Buku Besar Komisi: sales_commissions")]
+        APP["Manajer Sales Approval"]
+    end
+
+    subgraph War_Room["Live Sales War-Room TV Mode"]
+        TARGET["Target Omset Tim (sales_team_targets)"]
+        GAUGE["Gauge Pencapaian Omset Tim"]
+        PODIUM["Podium Top 3 Superstars (Gold/Silver/Bronze)"]
+        LEADER["Leaderboard Klasemen Tim"]
+        CELEB["Gong Closing / Real-Time Celebration Feed"]
+    end
+
+    subgraph HRIS_Payroll["HRIS & Payroll Formula Engine"]
+        SLIP["Generate Monthly Payroll Slip"]
+        AUTO_KOM["Komponen Gaji: KOMISI_SALES_AUTO"]
+    end
+
+    INV -->|Lunas| QRIS
+    DEAL -->|Tautkan Tagihan| INV
+    QRIS -->|Trigger Invoice Paid| CALC
+    PLAN -->|Ambil Rumus & Threshold| CALC
+    CALC --> COMM_DB
+    COMM_DB --> APP
+    APP -->|Status: Approved| AUTO_KOM
+    AUTO_KOM --> SLIP
+    COMM_DB --> GAUGE & PODIUM & LEADER & CELEB
+    TARGET --> GAUGE
+```
+
+#### Struktur Data Skema Komisi & War-Room (Migration 000018):
+* `sales_commission_plans`: Menyimpan aturan komisi per workspace (tipe: `tiered_threshold`, `percentage_deal`, `fixed_amount`, dengan `base_rate`, `threshold_amount`, dan `bonus_rate`).
+* `sales_commissions`: Transaksi komisi individual tenaga penjual yang tertaut ke `deal_id`, `invoice_id`, dan `user_id`. Status: `pending`, `approved`, `paid_in_payroll`, `rejected`.
+* `sales_team_targets`: Target omset tim bulanan per workspace (`period` e.g. `'2026-11'`) untuk perhitungan persentase pencapaian War-Room.
+
+### 5.6 Arsitektur Rekening Bank Resmi Perusahaan & QRIS Standar Nasional (Migration 000019)
+
+Fitur ini menyediakan konfigurasi terpusat (*single-source-of-truth*) untuk rekening bank resmi dan barcode QRIS Standar Nasional (ASPI / Bank Indonesia) per workspace. Ketika tim sales menerbitkan invoice atau pelanggan mengakses faktur tagihan, detail rekening dan barcode QRIS resmi langsung ditampilkan secara konsisten, scannable dari seluruh m-Banking dan e-Wallet, serta siap diintegrasikan dengan Payment Gateway otomatis.
+
+```mermaid
+flowchart LR
+    ADMIN["Owner / Admin Perusahaan"] -->|Atur No Rek & Barcode QRIS| SETTINGS["Settings (/settings?tab=payment)"]
+    SETTINGS -->|PUT /payment-settings| DB[("workspace_payment_settings")]
+    DB -->|GET /payment-settings| INV_API["Commercial Ops Service"]
+    INV_API --> INVOICE_MODAL["Invoice Payment Modal & PDF (/invoices)"]
+    INVOICE_MODAL --> CLIENT_PAY["Klien Scan QRIS (BCA, Livin, GoPay) / Transfer Bank PT"]
+    CLIENT_PAY -->|Konfirmasi Lunas| AUTO_ACTION["Otomasi: Status Won, Potong Stok Gudang & Hitung Komisi"]
+```
+
+#### Struktur Data Pengaturan Rekening & QRIS (Migration 000019):
+* `workspace_payment_settings`:
+  * `id`: UUID Primary Key.
+  * `workspace_id`: Foreign Key ke `workspaces.id` (Unique constraint per workspace).
+  * `bank_name`: Nama Bank resmi perusahaan (BCA, Bank Mandiri, BNI, BRI, BSI, CIMB Niaga, dll).
+  * `bank_account_number`: Nomor rekening operasional PT untuk penampungan dana invoice.
+  * `bank_account_holder`: Nama pemilik rekening resmi sesuai buku tabungan perbankan (PT / Badan Usaha).
+  * `qris_image_url`: URL gambar barcode QRIS merchant resmi (ASPI / Bank Indonesia).
+  * `qris_payload`: Payload string spesifikasi EMVCo / ASPI resmi.
+  * `payment_gateway_provider`: Mode pembayaran (`'manual'`, `'autogopay'`, `'midtrans'`, `'xendit'`).
+  * `payment_gateway_client_key`, `payment_gateway_server_key`: Kredensial API gateway (opsional).
+  * `payment_gateway_is_production`: Boolean flag lingkungan (Sandbox vs Live Production).
+  * `autogopay_api_key`: API Key AutoGoPay Gateway terenkripsi untuk integrasi GoPay Merchant.
+  * `autogopay_merchant_name`: Nama merchant resmi GoPay yang dicantumkan pada QRIS.
+
+#### Struktur Data Transaksi QRIS Dinamis (Migration 000020):
+Tabel `invoice_qris_transactions` mencatat seluruh sesi pembuatan QRIS dinamis per-tagihan untuk mencegah spam dan menjamin aturan 1 transaksi = 1 QRIS:
+* `id`: UUID Primary Key.
+* `workspace_id`: Foreign Key ke `workspaces.id`.
+* `invoice_id`: Foreign Key ke `invoices.id`.
+* `provider`: Nama gateway (`'autogopay'`).
+* `transaction_id`: ID unik transaksi dari gateway (misal: `AGP-TRX-1729381`).
+* `order_id`: ID pesanan unik internal (misal: `ORD-GP-1795102662-e7ba`).
+* `amount`: Nominal tagihan tepat presisi (terkunci otomatis).
+* `qr_string`: String spesifikasi EMVCo QRIS dari GoPay Merchant.
+* `qr_url`: URL file barcode QRIS dinamis.
+* `checkout_url`: URL checkout halaman web GoPay (opsional).
+* `status`: Status sesi (`'pending'`, `'settlement'`, `'expire'`, `'cancel'`).
+* `generate_count`: Jumlah generasi sesi QRIS untuk invoice ini (maksimum 2x per invoice).
+* `transaction_time`: Waktu penerbitan QRIS.
+* `expiry_time`: Waktu kedaluwarsa sesi QRIS (15 menit sejak diterbitkan).
+* `paid_at`: Stempel waktu penyelesaian transaksi saat webhook diterima.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Klien as Klien / Pembayar
+    participant FE as Frontend OCTO (/invoices)
+    participant BE as Backend OCTO (Go API)
+    participant AGP as AutoGoPay Gateway
+    participant GP as GoPay Merchant Network
+
+    Klien->>FE: Buka modal "⚡ Bayar QRIS"
+    FE->>BE: POST /invoices/:id/autogopay-qris
+    BE->>AGP: POST /qris/generate {amount: TotalAmount}
+    AGP-->>BE: 200 OK {order_id, qr_url, qr_string, expiry_time: +15m}
+    BE->>FE: 200 OK {InvoiceQRISTransaction}
+    FE-->>Klien: Tampilkan Dynamic QRIS & Countdown 15 Menit
+
+    loop Polling Status Tiap 3-4 Detik
+        FE->>BE: GET /invoices/:id/autogopay-status
+        BE-->>FE: {status: "pending"}
+    end
+
+    Klien->>GP: Scan & Transfer via GoPay / BCA Mobile / Mandiri
+    GP->>AGP: Transaksi Sukses Diterima
+    AGP->>BE: POST /workspaces/:id/integrations/autogopay/webhook (Header X-Signature: HMAC-SHA256)
+    Note over BE: Verifikasi Signature HMAC-SHA256 dengan AutoGopayAPIKey
+    BE->>BE: Update Invoice Status ke 'paid' & Potong Stok Gudang & Won Deal
+    BE-->>AGP: 200 OK {"success": true}
+
+    FE->>BE: GET /invoices/:id/autogopay-status
+    BE-->>FE: {status: "settlement"}
+    FE-->>Klien: 🎉 Tampilkan "PEMBAYARAN LUNAS / SETTLEMENT" & Tutup Sesi
+```
+
 ---
 
 ## 6. Prosedur Pemeliharaan & Runbook Operasional

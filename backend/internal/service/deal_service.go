@@ -17,10 +17,15 @@ type DealService struct {
 	activityRepo  *repository.ActivityRepository
 	auditRepo     *repository.AuditRepository
 	pillarService *PillarService
+	commService   *CommissionService
 }
 
 func (s *DealService) SetPillarService(ps *PillarService) {
 	s.pillarService = ps
+}
+
+func (s *DealService) SetCommissionService(cs *CommissionService) {
+	s.commService = cs
 }
 
 func NewDealService(dealRepo *repository.DealRepository, activityRepo *repository.ActivityRepository, auditRepo *repository.AuditRepository) *DealService {
@@ -298,6 +303,17 @@ func (s *DealService) UpdateDealStage(workspaceID, currentUserID, dealID string,
 		go func() {
 			_, _ = s.pillarService.HandleDealWonHandover(workspaceID, updatedDeal, currentUserID)
 		}()
+	}
+
+	// Trigger sales commission auto-calculation when deal is won
+	if updatedDeal.Status == domain.DealStatusWon && s.commService != nil {
+		owner := ""
+		if updatedDeal.OwnerID != nil {
+			owner = *updatedDeal.OwnerID
+		}
+		if owner != "" && updatedDeal.Value > 0 {
+			_, _ = s.commService.AutoCalculateCommissionForDeal(workspaceID, updatedDeal.ID, nil, updatedDeal.Title, updatedDeal.Value, owner)
+		}
 	}
 
 	return updatedDeal, nil

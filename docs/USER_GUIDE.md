@@ -147,6 +147,11 @@ Akses menu ini khusus bagi pengguna dengan peran **Admin** atau **Owner**:
    - Menentukan nama bot sapaan (misal: *Asisten Virtual OCTO*).
    - Menyesuaikan kalimat sambutan saat pelanggan pertama kali mengirim chat WhatsApp.
    - Mengisi jawaban otomatis untuk menu informasi produk, paket harga, dan jam operasional.
+5. **Tab Rekening Bank & QRIS Resmi Perusahaan (`/settings?tab=payment`):**
+   - Menentukan rekening operasional resmi PT/Badan Usaha (BCA, Bank Mandiri, BNI, BRI, BSI, CIMB Niaga, dll), nomor rekening, dan atas nama badan hukum resmi.
+   - Mengonfigurasi barcode QRIS Standar Nasional (ASPI / Bank Indonesia) dan EMVCo payload string yang dapat di-scan oleh seluruh mobile banking dan e-wallet.
+   - Memilih mode kanal: **Transfer Manual & QRIS Statis** (bebas potongan biaya admin MDR) atau **Payment Gateway Otomatis** (Midtrans / Xendit dengan webhook status callback).
+   - Menyediakan kartu pratinjau real-time (*Live Interactive Preview*) yang mencerminkan tampilan yang akan dilihat oleh klien pada setiap invoice.
 
 ---
 
@@ -262,15 +267,36 @@ OCTO-CRM kini dilengkapi instrumen komersial lengkap untuk mempercepat siklus pe
    - Pada baris invoice, klik tombol **"Lihat / Cetak"** untuk membuka tampilan resmi berkop perusahaan, rincian produk, dan instruksi transfer.
    - Klik **"Cetak PDF"** untuk mengunduh dokumen penagihan.
 
-### 10.2 Simulasi Pembayaran QRIS/VA & Otomasi Lintas-Modul
-1. Pada tabel tagihan yang berstatus belum lunas, klik tombol **"⚡ Bayar QRIS"**.
-2. Sistem menampilkan kode QRIS Nasional beserta nomor Virtual Account tagihan secara dinamis.
+### 10.2 Pembayaran QRIS Standar Nasional (ASPI/BI), Rekening Resmi PT & Otomasi Lintas-Modul
+1. Pada tabel tagihan yang berstatus belum lunas, klik tombol **"⚡ Bayar QRIS"** atau klik **"Bayar via QRIS / Rekening PT"** dari modal pratinjau invoice.
+2. Sistem menyajikan antarmuka pembayaran dual-channel:
+   - **Tab Scan QRIS Nasional:** Menampilkan barcode standar nasional (ASPI / Bank Indonesia) resmi perusahaan Anda dengan nama merchant PT dan nomor NMID resmi. Barcode ini dapat langsung dipindai (*scannable*) menggunakan seluruh aplikasi mobile banking di Indonesia (BCA, Livin' Mandiri, BRImo, BNI) serta seluruh dompet digital e-wallet (GoPay, OVO, DANA, ShopeePay, LinkAja).
+   - **Tab Transfer Bank Langsung:** Menampilkan nama bank perusahaan (BCA, Mandiri, BRI, dll), nomor rekening PT, nama penerima legal perusahaan, dan tombol **"Salin No. Rek"** interaktif untuk mempermudah transfer m-Banking tanpa risiko salah ketik.
 3. Klik tombol **"✅ Konfirmasi Pembayaran Lunas"**:
    - Status invoice seketika berubah menjadi **PAID (Lunas)**.
    - **Otomasi Stok Gudang:** Sistem secara otomatis memotong stok produk yang ada di modul **Inventori** (*Stock Out*).
    - **Otomasi Deal Closing:** Peluang penjualan (*Deal*) yang tertaut di papan Kanban otomatis berpindah ke tahap **WON**.
+   - **Kalkulasi Komisi Sales:** Sistem secara otomatis menghitung komisi sales representative terkait ke modul Komisi Penjualan (`/commissions`).
 
-### 10.3 Modul Otomasi Follow-Up & Drip WhatsApp (`/automations`)
+### 10.3 Integrasi Resmi AutoGoPay (GoPay Merchant) - Dynamic QRIS Per-Tagihan & Webhook Real-Time
+Jika perusahaan Anda telah memiliki akun **GoPay Merchant**, Anda dapat mengaktifkan gateway **AutoGoPay** untuk menerbitkan QRIS Dinamis dengan nominal tagihan yang terkunci presisi tanpa biaya gateway yang mahal:
+
+1. **Konfigurasi di Menu Pengaturan (`/settings?tab=payment`):**
+   - Masuk ke tab **Rekening Bank & QRIS**.
+   - Pada bagian **3. Mode Pembayaran & Gateway**, pilih opsi radio **"AutoGoPay (GoPay Merchant)"**.
+   - Masukkan **API Key AutoGoPay** dari dashboard AutoGoPay Anda.
+   - Masukkan **Nama Merchant GoPay** resmi Anda (misal: *PT MAJU BERSAMA / KEDAI KOPI*).
+   - Salin **Webhook Callback URL** yang otomatis digenerate (contoh: `https://api.domain/api/v1/workspaces/:id/integrations/autogopay/webhook`) dan pasang pada pengaturan webhook di AutoGoPay.
+   - Klik **"Simpan Konfigurasi Rekening & QRIS"**.
+
+2. **Penerbitan Dynamic QRIS Otomatis di Invoice (`/invoices`):**
+   - Saat staf atau klien membuka modal **"⚡ Bayar QRIS"** pada invoice yang belum lunas, OCTO CRM secara otomatis menghubungi gateway AutoGoPay untuk menerbitkan sesi QRIS Dinamis.
+   - **Nominal Terkunci Presisi:** Nominal invoice otomatis tertera pada barcode, sehingga pembayar tidak perlu mengetikkan nominal rupiah secara manual saat scan.
+   - **Batas Waktu Pembayaran (15 Menit):** Terdapat hitung mundur (*countdown timer*) 15 menit sesuai regulasi ASPI.
+   - **Anti-Spam & Aturan 1 Transaksi 1 QRIS:** Sistem secara otomatis menggunakan ulang sesi aktif yang ada dan membatasi regenerasi maksimal 2 kali per-invoice untuk melindungi akun merchant dari pembatasan.
+   - **Auto-Poller & Auto-Settlement:** Sistem melakukan pengecekan status otomatis setiap 3-4 detik. Saat uang diterima oleh GoPay Merchant, webhook bertanda tangan **HMAC-SHA256 (`X-Signature`)** memverifikasi transaksi dan seketika mengubah invoice menjadi **PAID / LUNAS**, memotong stok produk, dan mencatat komisi sales!
+
+### 10.4 Modul Otomasi Follow-Up & Drip WhatsApp (`/automations`)
 Menu ini mengotomatiskan sapaan penawaran dan pengingat follow-up agar tidak ada prospek yang terabaikan.
 
 1. **Navigasi:** Klik menu **Otomasi Follow-up WA** di sidebar atau akses URL `/automations`.
@@ -289,5 +315,54 @@ Menu ini mengotomatiskan sapaan penawaran dan pengingat follow-up agar tidak ada
    - Klik tombol **"▶️ Uji Coba"** pada salah satu workflow untuk mensimulasikan pengiriman pesan ke target prospek tertentu.
 5. **Riwayat Audit Eksekusi (Audit Logs):**
    - Klik tab **"Riwayat Eksekusi (Audit Logs)"** untuk melihat transparansi waktu pengiriman, target prospek, rincian pesan WhatsApp, dan status keberhasilan pengiriman (*Success*).
+
+---
+
+## 11. Sales Commission Engine & Live Sales War-Room TV Mode (`/commissions` & `/war-room`)
+
+Modul ini adalah fitur unggulan (*killer feature*) yang menghubungkan aktivitas penjualan (Deal Closing & Pembayaran QRIS) langsung ke **Insentif Komisi Tim Sales**, **Penggajian HRIS**, dan **Papan Klasemen Siar Kantor (War-Room)**.
+
+### 11.1 Pengaturan Skema & Aturan Komisi (`/commissions`)
+1. **Navigasi:** Klik menu **Komisi Penjualan** pada sidebar atau kunjungi `/commissions`.
+2. **Ringkasan Finansial:** Kartu indikator metrik menampilkan:
+   - *Total Akumulasi Komisi:* Jumlah seluruh komisi aktif pada periode berjalan.
+   - *Menunggu Persetujuan:* Komisi yang menunggu review dari manajer penjualan.
+   - *Telah Disetujui:* Komisi tervalidasi yang siap dicairkan ke slip gaji.
+   - *Top Sales Earner:* Nama sales representative dengan perolehan komisi tertinggi.
+3. **Membuat Skema Komisi:**
+   - Buka tab **"Skema & Aturan Komisi"** lalu klik **"+ Buat Skema Baru"**.
+   - Masukkan nama skema (misal: *Skema Insentif Juara 2026*).
+   - Tentukan tipe kalkulasi:
+     - **Tiered Threshold:** Persentase dasar (misal 3.5%) + Bonus over-target (misal +6%) jika omset melebihi threshold tertentu (misal Rp 50.000.000).
+     - **Percentage Deal:** Persentase flat dari nilai transaksi.
+     - **Fixed Amount:** Nominal tetap per deal yang berhasil closing.
+   - Centang opsi aktif dan simpan.
+
+### 11.2 Alur Persetujuan Komisi (Approval Workflow)
+1. Setiap kali invoice berstatus Lunas (PAID) atau deal berpindah ke tahap WON, komisi otomatis terhitung berdasarkan skema aktif dan masuk ke buku besar komisi.
+2. Manajer penjualan dapat memfilter daftar berdasarkan periode bulan, status (*Pending*, *Approved*, *Paid in Payroll*, *Rejected*), atau mencari nama sales rep.
+3. Klik ikon centang hijau **"Setujui Komisi"** untuk memvalidasi insentif tim.
+
+### 11.3 Integrasi Otomatis ke Slip Gaji HRIS (`/payroll`)
+1. Komisi yang telah berstatus **Disetujui (Approved)** secara instan ditarik oleh modul penggajian (`/payroll`).
+2. Saat tombol **"Generate Payroll Bulanan"** ditekan, sistem otomatis menginjeksi komponen `KOMISI_SALES_AUTO` ke dalam slip gaji karyawan tanpa perlu input manual.
+
+### 11.4 Mode Siar TV: Live Sales War-Room (`/war-room`)
+Dirancang khusus untuk ditampilkan pada layar monitor TV di ruang kerja penjualan (*Sales Floor*) guna memompa semangat kompetisi positif dan transparansi target.
+
+1. **Navigasi & Tampilan TV:**
+   - Klik tombol **"Buka Sales War-Room TV"** di halaman komisi atau menu sidebar `/war-room`.
+   - Klik tombol **Fullscreen (Layar Penuh)** di pojok kanan atas untuk presentasi optimal di TV kantor.
+2. **Gauge Target Omset Tim:**
+   - Menampilkan total omset tercapai dibanding target bulanan tim (misal Rp 250.000.000) dengan indikator persentase dan progress bar bergradasi neon.
+3. **Podium Superstar Penjualan:**
+   - **Peringkat 1 (Gold 🥇):** Menampilkan sang juara (*Champion Closer of the Month*) dengan mahkota emas, avatar, omset closing, dan total komisi yang diraih.
+   - **Peringkat 2 (Silver 🥈) & 3 (Bronze 🥉):** Menampilkan runner-up dengan gaya visual elegan.
+4. **Klasemen Lengkap Tim Sales:**
+   - Tabel peringkat lengkap untuk seluruh staf penjualan beserta progres target individu.
+5. **Feed & Gong Perayaan Closing Real-Time:**
+   - Kolom sebelah kanan memperbarui secara otomatis setiap kali ada deal yang ditutup.
+   - Klik tombol **"Gong Closing 🎉"** untuk mensimulasikan perayaan keberhasilan closing deal dengan suara chime dan banner pop-up selebrasi.
+
 
 

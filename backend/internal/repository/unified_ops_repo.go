@@ -405,3 +405,17 @@ func (r *UnifiedOpsRepository) GetSalesWonSummary(workspaceID, userID, periodMon
 	}
 	return res.TotalWon, res.CountWon, nil
 }
+
+func (r *UnifiedOpsRepository) GetApprovedCommissionsTotal(workspaceID, userID, periodMonth string) (float64, error) {
+	query := `
+		SELECT COALESCE(SUM(commission_amount), 0.0)
+		FROM sales_commissions
+		WHERE workspace_id = $1 AND user_id = $2 AND period = $3 AND status = 'approved'
+	`
+	var total float64
+	err := r.db.Get(&total, query, workspaceID, userID, periodMonth)
+	if err != nil {
+		return 0, nil
+	}
+	return total, nil
+}

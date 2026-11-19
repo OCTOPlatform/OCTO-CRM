@@ -27,6 +27,8 @@ import {
   DollarSign,
   Receipt,
   Zap,
+  Trophy,
+  Award,
 } from 'lucide-react';
 
 interface NavItem {
@@ -86,6 +88,8 @@ export default function Sidebar() {
     }
     pipelineItems.push({ label: 'Penawaran & Invoice', href: '/invoices', icon: Receipt, badge: 'QRIS' });
     pipelineItems.push({ label: 'Otomasi Follow-up WA', href: '/automations', icon: Zap, badge: 'Drip' });
+    pipelineItems.push({ label: 'Sales War Room', href: '/war-room', icon: Trophy, badge: 'LIVE' });
+    pipelineItems.push({ label: 'Komisi Penjualan', href: '/commissions', icon: Award, badge: 'Bonus' });
 
     // 5. Operations (Tasks & Reports)
     const opItems: NavItem[] = [

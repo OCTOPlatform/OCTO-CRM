@@ -1,0 +1,51 @@
+[
+  {
+    "step": "Step 1: Admin Authentication & Session",
+    "status": "PASSED",
+    "duration_ms": 2427,
+    "details": "Logged in as budi@octocrm.id",
+    "screenshot": ""
+  },
+  {
+    "step": "Step 2: Settings Company Bank & QRIS Navigation",
+    "status": "PASSED",
+    "duration_ms": 3579,
+    "details": "Loaded bank form & live QRIS preview card",
+    "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/payment_qris/01_settings_company_bank_qris.png"
+  },
+  {
+    "step": "Step 3: Update & Save Payment Settings",
+    "status": "PASSED",
+    "duration_ms": 1274,
+    "details": "Successfully updated account holder to PT Maju Bersama Solusindo Tbk",
+    "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/payment_qris/02_settings_saved_success.png"
+  },
+  {
+    "step": "Step 4: Invoice Detail Official Bank & QRIS Instruction",
+    "status": "PASSED",
+    "duration_ms": 3801,
+    "details": "Official company bank & QRIS shown in invoice print modal",
+    "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/payment_qris/03_invoice_detail_bank_instructions.png"
+  },
+  {
+    "step": "Step 5: Payment Modal QRIS Scan View",
+    "status": "PASSED",
+    "duration_ms": 1293,
+    "details": "Official ASPI QRIS display stand rendered with scannable QR barcode",
+    "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/payment_qris/04_invoice_payment_modal_qris.png"
+  },
+  {
+    "step": "Step 6: Payment Modal Direct Company Bank Transfer",
+    "status": "PASSED",
+    "duration_ms": 1372,
+    "details": "Switched to bank transfer tab with interactive copy button",
+    "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/payment_qris/05_invoice_payment_modal_bank_transfer.png"
+  },
+  {
+    "step": "Step 7: Confirm Payment & Mark Invoice Paid",
+    "status": "PASSED",
+    "duration_ms": 2694,
+    "details": "Payment processed successfully and inventory / deal status updated",
+    "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/payment_qris/06_invoice_marked_paid.png"
+  }
+]

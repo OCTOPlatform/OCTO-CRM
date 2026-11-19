@@ -192,6 +192,7 @@ func (s *UnifiedOpsService) GenerateMonthlyPayrollRun(workspaceID, periodMonth s
 
 		// Pull sales won deals for period from CRM deals
 		salesWonVal, salesWonCount, _ := s.repo.GetSalesWonSummary(workspaceID, userID, periodMonth)
+		salesCommApproved, _ := s.repo.GetApprovedCommissionsTotal(workspaceID, userID, periodMonth)
 
 		// Base variables map for formula evaluator
 		vars := map[string]float64{
@@ -202,11 +203,22 @@ func (s *UnifiedOpsService) GenerateMonthlyPayrollRun(workspaceID, periodMonth s
 			"HARI_ALPA":        float64(attSummary.TotalAbsent),
 			"TOTAL_OMSET_WON":  salesWonVal,
 			"JUMLAH_DEAL_WON":  float64(salesWonCount),
+			"KOMISI_SALES":     salesCommApproved,
 			"GAJI_BRUTO":       baseSalary,
 		}
 
 		var totalAllowances, totalDeductions, totalCommissions float64
 		breakdownItems := make(map[string]interface{})
+
+		if salesCommApproved > 0 {
+			totalCommissions += salesCommApproved
+			breakdownItems["KOMISI_SALES_AUTO"] = map[string]interface{}{
+				"name":    "Komisi Penjualan CRM (Tervalidasi)",
+				"type":    "commission",
+				"amount":  salesCommApproved,
+				"formula": "Akumulasi komisi approved periode " + periodMonth,
+			}
+		}
 
 		// First pass: allowances and commissions
 		for _, comp := range components {

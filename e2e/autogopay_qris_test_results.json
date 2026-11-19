@@ -1,0 +1,47 @@
+{
+  "total_time_ms": 17523,
+  "results": [
+    {
+      "step": "Step 1: Admin Authentication",
+      "status": "PASSED",
+      "duration_ms": 2228,
+      "details": "Logged in as budi@octocrm.id",
+      "screenshot": ""
+    },
+    {
+      "step": "Step 2: AutoGoPay Gateway Configuration in Settings",
+      "status": "PASSED",
+      "duration_ms": 4312,
+      "details": "Saved AutoGoPay API Key & Merchant Name successfully",
+      "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/autogopay_qris/01_settings_autogopay_configured.png"
+    },
+    {
+      "step": "Step 3: Dynamic AutoGoPay QRIS Rendered on Invoice",
+      "status": "PASSED",
+      "duration_ms": 2209,
+      "details": "Generated 15-min Dynamic QRIS with Order ID ORD-GP-1795102662-e7ba",
+      "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/autogopay_qris/02_dynamic_autogopay_qris_modal.png"
+    },
+    {
+      "step": "Step 4: AutoGoPay Webhook HMAC-SHA256 Settlement",
+      "status": "PASSED",
+      "duration_ms": 32,
+      "details": "Webhook processed successfully for ORD-GP-1795102662-e7ba: {'success': True}",
+      "screenshot": ""
+    },
+    {
+      "step": "Step 5: Real-Time Polling Detected Settlement",
+      "status": "PASSED",
+      "duration_ms": 2969,
+      "details": "Auto-poller caught 'settlement' status and updated badge to PEMBAYARAN LUNAS",
+      "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/autogopay_qris/03_qris_settlement_detected.png"
+    },
+    {
+      "step": "Step 6: Invoices Table State Verified",
+      "status": "PASSED",
+      "duration_ms": 3205,
+      "details": "Invoice verified as PAID in central list",
+      "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/autogopay_qris/04_invoices_paid_status_verified.png"
+    }
+  ]
+}

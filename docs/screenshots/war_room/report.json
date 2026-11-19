@@ -1,0 +1,76 @@
+{
+  "total_steps": 10,
+  "passed": 10,
+  "results": [
+    {
+      "step": "Step 1: Admin Authentication & Session",
+      "status": "PASSED",
+      "duration_ms": 2613,
+      "details": "Logged in successfully as budi@octocrm.id",
+      "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/war_room/01_dashboard_logged_in.png"
+    },
+    {
+      "step": "Step 2: Navigation to Sales Commission Management",
+      "status": "PASSED",
+      "duration_ms": 2026,
+      "details": "Commission summary cards and header loaded",
+      "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/war_room/02_commissions_overview.png"
+    },
+    {
+      "step": "Step 3: Commission Transactions Ledger & Filtering",
+      "status": "PASSED",
+      "duration_ms": 1167,
+      "details": "Filtered transactions table with Deal details and rates",
+      "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/war_room/03_commission_transactions_table.png"
+    },
+    {
+      "step": "Step 4: Configure Commission Plan & Rules",
+      "status": "PASSED",
+      "duration_ms": 2757,
+      "details": "Created 'Skema Insentif Juara 2026' with 3.5% base and tier bonus",
+      "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/war_room/04_commission_plan_saved.png"
+    },
+    {
+      "step": "Step 5: Commission Review & Approval Workflow",
+      "status": "PASSED",
+      "duration_ms": 973,
+      "details": "Commission approval workflow confirmed",
+      "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/war_room/05_commission_approved.png"
+    },
+    {
+      "step": "Step 6: Live Sales War-Room TV Mode Navigation",
+      "status": "PASSED",
+      "duration_ms": 2333,
+      "details": "Pulsing live badge, dark neon styling, and top metrics displayed",
+      "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/war_room/06_war_room_tv_overview.png"
+    },
+    {
+      "step": "Step 7: Superstars Podium (Top 3 Closer Superstars)",
+      "status": "PASSED",
+      "duration_ms": 722,
+      "details": "Podium verified with Champion #1 Gold crown and stats",
+      "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/war_room/07_war_room_podium_superstars.png"
+    },
+    {
+      "step": "Step 8: Team Leaderboard & Recent Celebrations Feed",
+      "status": "PASSED",
+      "duration_ms": 698,
+      "details": "Leaderboard table rankings and real-time feed verified",
+      "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/war_room/08_war_room_leaderboard_feed.png"
+    },
+    {
+      "step": "Step 9: Real Deal Closing & Live Closing Execution",
+      "status": "PASSED",
+      "duration_ms": 4653,
+      "details": "Real won deal celebration triggered and real open deal closed dynamically",
+      "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/war_room/09_deal_closing_celebration_popup.png"
+    },
+    {
+      "step": "Step 10: Linkage to HRIS Payroll Slip Generation",
+      "status": "PASSED",
+      "duration_ms": 1930,
+      "details": "Verified cross-module linkage to HRIS Payroll",
+      "screenshot": "/Users/egichandrapratama/Download/OCTO/OCTO-CRM/e2e/screenshots/war_room/10_payroll_commission_sync.png"
+    }
+  ]
+}

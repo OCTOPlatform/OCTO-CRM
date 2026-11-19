@@ -28,8 +28,12 @@ func (r *CommercialOpsRepository) ListInvoices(workspaceID, invType, status stri
 		SELECT 
 			i.id, i.workspace_id, i.deal_id, i.contact_id, i.company_id, i.invoice_number,
 			i.issue_date::text AS issue_date, i.due_date::text AS due_date, i.type, i.status,
-			i.subtotal, i.tax_amount, i.discount_amount, i.total_amount, i.notes, i.terms,
-			i.payment_method, i.payment_reference, i.paid_at, i.created_at, i.updated_at,
+			i.subtotal, i.tax_amount, i.discount_amount, i.total_amount,
+			COALESCE(i.notes, '') AS notes,
+			COALESCE(i.terms, '') AS terms,
+			COALESCE(i.payment_method, '') AS payment_method,
+			COALESCE(i.payment_reference, '') AS payment_reference,
+			i.paid_at, i.created_at, i.updated_at,
 			COALESCE(c.first_name || ' ' || c.last_name, '') AS contact_name,
 			COALESCE(c.phone, '') AS contact_phone,
 			COALESCE(comp.name, '') AS company_name,
@@ -66,8 +70,12 @@ func (r *CommercialOpsRepository) GetInvoiceByID(workspaceID, id string) (*domai
 		SELECT 
 			i.id, i.workspace_id, i.deal_id, i.contact_id, i.company_id, i.invoice_number,
 			i.issue_date::text AS issue_date, i.due_date::text AS due_date, i.type, i.status,
-			i.subtotal, i.tax_amount, i.discount_amount, i.total_amount, i.notes, i.terms,
-			i.payment_method, i.payment_reference, i.paid_at, i.created_at, i.updated_at,
+			i.subtotal, i.tax_amount, i.discount_amount, i.total_amount,
+			COALESCE(i.notes, '') AS notes,
+			COALESCE(i.terms, '') AS terms,
+			COALESCE(i.payment_method, '') AS payment_method,
+			COALESCE(i.payment_reference, '') AS payment_reference,
+			i.paid_at, i.created_at, i.updated_at,
 			COALESCE(c.first_name || ' ' || c.last_name, '') AS contact_name,
 			COALESCE(c.phone, '') AS contact_phone,
 			COALESCE(comp.name, '') AS company_name,
@@ -178,6 +186,24 @@ func (r *CommercialOpsRepository) MarkDealAsWon(workspaceID, dealID string) erro
 	query := `UPDATE deals SET status = 'won', updated_at = NOW() WHERE workspace_id = $1 AND id = $2`
 	_, err := r.db.Exec(query, workspaceID, dealID)
 	return err
+}
+
+func (r *CommercialOpsRepository) GetDealDetails(workspaceID, dealID string) (ownerID string, dealTitle string, dealValue float64, err error) {
+	var res struct {
+		OwnerID *string `db:"owner_id"`
+		Title   string  `db:"title"`
+		Value   float64 `db:"value"`
+	}
+	query := `SELECT owner_id, title, value FROM deals WHERE workspace_id = $1 AND id = $2`
+	err = r.db.Get(&res, query, workspaceID, dealID)
+	if err != nil {
+		return "", "", 0, err
+	}
+	owner := ""
+	if res.OwnerID != nil {
+		owner = *res.OwnerID
+	}
+	return owner, res.Title, res.Value, nil
 }
 
 func (r *CommercialOpsRepository) DeductProductStock(workspaceID, productID string, quantity float64, invoiceNumber string) error {
@@ -347,4 +373,168 @@ func (r *CommercialOpsRepository) ListAutomationLogs(workspaceID string, limit i
 		logs = []domain.AutomationLog{}
 	}
 	return logs, err
+}
+
+// -----------------------------------------------------------------------------
+// Workspace Payment & QRIS Settings
+// -----------------------------------------------------------------------------
+
+func (r *CommercialOpsRepository) GetPaymentSettings(workspaceID string) (*domain.WorkspacePaymentSettings, error) {
+	query := `
+		SELECT 
+			id, workspace_id, bank_name, bank_account_number, bank_account_holder,
+			qris_image_url, qris_payload, payment_gateway_provider,
+			payment_gateway_client_key, payment_gateway_server_key,
+			payment_gateway_is_production,
+			COALESCE(autogopay_api_key, '') AS autogopay_api_key,
+			COALESCE(autogopay_merchant_name, '') AS autogopay_merchant_name,
+			created_at, updated_at
+		FROM workspace_payment_settings
+		WHERE workspace_id = $1
+	`
+	var s domain.WorkspacePaymentSettings
+	err := r.db.Get(&s, query, workspaceID)
+	if err != nil {
+		// If not found, return default fallback
+		return &domain.WorkspacePaymentSettings{
+			WorkspaceID:            workspaceID,
+			BankName:               "Bank Central Asia (BCA)",
+			BankAccountNumber:      "880129994012",
+			BankAccountHolder:      "PT Maju Bersama Solusindo",
+			PaymentGatewayProvider: "manual",
+			QRISImageUrl:           "https://api.qrserver.com/v1/create-qr-code/?size=350x350&data=00020101021126590014ID.LINKAJA.WWW0118936009140000000000021500000000000000051440014ID.GO-PAY.WWW011893600898000000000002150000000000000005204581253033605802ID5925PT%20MAJU%20BERSAMA%20SOLUSINDO6007JAKARTA61051293062070703A016304",
+		}, nil
+	}
+	return &s, nil
+}
+
+func (r *CommercialOpsRepository) UpsertPaymentSettings(workspaceID string, s domain.WorkspacePaymentSettings) (*domain.WorkspacePaymentSettings, error) {
+	query := `
+		INSERT INTO workspace_payment_settings (
+			workspace_id, bank_name, bank_account_number, bank_account_holder,
+			qris_image_url, qris_payload, payment_gateway_provider,
+			payment_gateway_client_key, payment_gateway_server_key,
+			payment_gateway_is_production, autogopay_api_key, autogopay_merchant_name,
+			updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
+		ON CONFLICT (workspace_id) DO UPDATE SET
+			bank_name = EXCLUDED.bank_name,
+			bank_account_number = EXCLUDED.bank_account_number,
+			bank_account_holder = EXCLUDED.bank_account_holder,
+			qris_image_url = EXCLUDED.qris_image_url,
+			qris_payload = EXCLUDED.qris_payload,
+			payment_gateway_provider = EXCLUDED.payment_gateway_provider,
+			payment_gateway_client_key = EXCLUDED.payment_gateway_client_key,
+			payment_gateway_server_key = EXCLUDED.payment_gateway_server_key,
+			payment_gateway_is_production = EXCLUDED.payment_gateway_is_production,
+			autogopay_api_key = EXCLUDED.autogopay_api_key,
+			autogopay_merchant_name = EXCLUDED.autogopay_merchant_name,
+			updated_at = NOW()
+		RETURNING 
+			id, workspace_id, bank_name, bank_account_number, bank_account_holder,
+			qris_image_url, qris_payload, payment_gateway_provider,
+			payment_gateway_client_key, payment_gateway_server_key,
+			payment_gateway_is_production,
+			COALESCE(autogopay_api_key, '') AS autogopay_api_key,
+			COALESCE(autogopay_merchant_name, '') AS autogopay_merchant_name,
+			created_at, updated_at
+	`
+	var updated domain.WorkspacePaymentSettings
+	err := r.db.QueryRowx(query,
+		workspaceID, s.BankName, s.BankAccountNumber, s.BankAccountHolder,
+		s.QRISImageUrl, s.QRISPayload, s.PaymentGatewayProvider,
+		s.PaymentGatewayClientKey, s.PaymentGatewayServerKey,
+		s.PaymentGatewayIsProduction, s.AutoGopayAPIKey, s.AutoGopayMerchantName,
+	).StructScan(&updated)
+	if err != nil {
+		return nil, err
+	}
+	return &updated, nil
+}
+
+// -----------------------------------------------------------------------------
+// Invoice QRIS Dynamic Transactions (AutoGoPay / Merchant Gateway)
+// -----------------------------------------------------------------------------
+
+func (r *CommercialOpsRepository) GetActiveQRISTransaction(invoiceID string) (*domain.InvoiceQRISTransaction, error) {
+	query := `
+		SELECT 
+			id, workspace_id, invoice_id, provider, transaction_id, order_id,
+			amount, qr_string, qr_url, checkout_url, status, generate_count,
+			transaction_time, expiry_time, paid_at, created_at, updated_at
+		FROM invoice_qris_transactions
+		WHERE invoice_id = $1
+		ORDER BY created_at DESC LIMIT 1
+	`
+	var tx domain.InvoiceQRISTransaction
+	err := r.db.Get(&tx, query, invoiceID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &tx, nil
+}
+
+func (r *CommercialOpsRepository) GetQRISTransactionByOrderIDOrTxID(orderID, txID string) (*domain.InvoiceQRISTransaction, error) {
+	query := `
+		SELECT 
+			id, workspace_id, invoice_id, provider, transaction_id, order_id,
+			amount, qr_string, qr_url, checkout_url, status, generate_count,
+			transaction_time, expiry_time, paid_at, created_at, updated_at
+		FROM invoice_qris_transactions
+		WHERE (order_id = $1 AND $1 != '') OR (transaction_id = $2 AND $2 != '')
+		ORDER BY created_at DESC LIMIT 1
+	`
+	var tx domain.InvoiceQRISTransaction
+	err := r.db.Get(&tx, query, orderID, txID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &tx, nil
+}
+
+func (r *CommercialOpsRepository) GetInvoiceQRISTransactionCount(invoiceID string) (int, error) {
+	query := `SELECT COUNT(*) FROM invoice_qris_transactions WHERE invoice_id = $1`
+	var count int
+	err := r.db.Get(&count, query, invoiceID)
+	return count, err
+}
+
+func (r *CommercialOpsRepository) CreateQRISTransaction(tx domain.InvoiceQRISTransaction) (*domain.InvoiceQRISTransaction, error) {
+	query := `
+		INSERT INTO invoice_qris_transactions (
+			workspace_id, invoice_id, provider, transaction_id, order_id,
+			amount, qr_string, qr_url, checkout_url, status, generate_count,
+			transaction_time, expiry_time, created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW())
+		RETURNING 
+			id, workspace_id, invoice_id, provider, transaction_id, order_id,
+			amount, qr_string, qr_url, checkout_url, status, generate_count,
+			transaction_time, expiry_time, paid_at, created_at, updated_at
+	`
+	var created domain.InvoiceQRISTransaction
+	err := r.db.QueryRowx(query,
+		tx.WorkspaceID, tx.InvoiceID, tx.Provider, tx.TransactionID, tx.OrderID,
+		tx.Amount, tx.QRString, tx.QRURL, tx.CheckoutURL, tx.Status, tx.GenerateCount,
+		tx.TransactionTime, tx.ExpiryTime,
+	).StructScan(&created)
+	if err != nil {
+		return nil, err
+	}
+	return &created, nil
+}
+
+func (r *CommercialOpsRepository) UpdateQRISTransactionStatus(transactionID, status string, paidAt *time.Time) error {
+	query := `
+		UPDATE invoice_qris_transactions
+		SET status = $2, paid_at = $3, updated_at = NOW()
+		WHERE transaction_id = $1 OR order_id = $1
+	`
+	_, err := r.db.Exec(query, transactionID, status, paidAt)
+	return err
 }

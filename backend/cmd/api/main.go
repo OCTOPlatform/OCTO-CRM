@@ -52,6 +52,7 @@ func main() {
 	notificationRepo := repository.NewNotificationRepo(db)
 	unifiedOpsRepo := repository.NewUnifiedOpsRepository(db)
 	commercialOpsRepo := repository.NewCommercialOpsRepository(db)
+	commissionRepo := repository.NewCommissionRepository(db)
 
 	// Services
 	authService := service.NewAuthService(userRepo, auditRepo, cfg)
@@ -68,10 +69,12 @@ func main() {
 	masterService := service.NewMasterService(userRepo, auditRepo, cfg)
 	notificationService := service.NewNotificationService(notificationRepo)
 	unifiedOpsService := service.NewUnifiedOpsService(unifiedOpsRepo, userRepo, dealRepo)
-	commercialOpsService := service.NewCommercialOpsService(commercialOpsRepo)
+	commissionService := service.NewCommissionService(commissionRepo, userRepo, dealRepo)
+	commercialOpsService := service.NewCommercialOpsService(commercialOpsRepo, commissionService)
 
 	// Wire cross-pillar services
 	dealService.SetPillarService(pillarService)
+	dealService.SetCommissionService(commissionService)
 	inboxService.SetPillarService(pillarService)
 	inboxService.SetNotificationRepo(notificationRepo)
 	inboxService.SetTicketRepo(ticketRepo)
@@ -96,6 +99,7 @@ func main() {
 	notificationHandler := handler.NewNotificationHandler(notificationService)
 	unifiedOpsHandler := handler.NewUnifiedOpsHandler(unifiedOpsService)
 	commercialOpsHandler := handler.NewCommercialOpsHandler(commercialOpsService)
+	commissionHandler := handler.NewCommissionHandler(commissionService)
 
 	// Setup Gin Engine
 	if cfg.Environment == "production" {
@@ -152,6 +156,9 @@ func main() {
 		// Public TikTok Ads Lead Generation Webhooks
 		api.GET("/workspaces/:workspace_id/integrations/tiktok/webhook", integrationHandler.VerifyTikTokWebhook)
 		api.POST("/workspaces/:workspace_id/integrations/tiktok/webhook", integrationHandler.ReceiveTikTokWebhook)
+
+		// Public AutoGoPay (GoPay Merchant QRIS) Webhook Callback
+		api.POST("/workspaces/:workspace_id/integrations/autogopay/webhook", commercialOpsHandler.HandleAutoGopayWebhook)
 
 		// Public WebChat Widget Endpoints (Website Live Chat from OCTO-WEB)
 		api.POST("/workspaces/:workspace_id/inbox/webchat/send", inboxHandler.PublicWebChatSend)
@@ -339,6 +346,8 @@ func main() {
 			wsRoutes.POST("/invoices", commercialOpsHandler.CreateInvoice)
 			wsRoutes.GET("/invoices/:id", commercialOpsHandler.GetInvoiceByID)
 			wsRoutes.POST("/invoices/:id/pay", commercialOpsHandler.PayInvoice)
+			wsRoutes.POST("/invoices/:id/autogopay-qris", commercialOpsHandler.GenerateAutoGopayQRIS)
+			wsRoutes.GET("/invoices/:id/autogopay-status", commercialOpsHandler.CheckAutoGopayQRISStatus)
 
 			// 2. WhatsApp Drip Marketing & Follow-up Workflows
 			wsRoutes.GET("/drip-automations", commercialOpsHandler.ListWorkflows)
@@ -347,6 +356,26 @@ func main() {
 			wsRoutes.DELETE("/drip-automations/:id", commercialOpsHandler.DeleteWorkflow)
 			wsRoutes.POST("/drip-automations/:id/trigger", commercialOpsHandler.TriggerWorkflow)
 			wsRoutes.GET("/drip-automations/logs", commercialOpsHandler.ListAutomationLogs)
+
+			// ================= SALES COMMISSION & WAR-ROOM LEADERBOARD =================
+			// 1. Commission Plans
+			wsRoutes.GET("/commissions/plans", commissionHandler.ListPlans)
+			wsRoutes.POST("/commissions/plans", commissionHandler.CreatePlan)
+			wsRoutes.PUT("/commissions/plans/:id", commissionHandler.UpdatePlan)
+
+			// 2. Sales Commissions & Approvals
+			wsRoutes.GET("/commissions", commissionHandler.ListCommissions)
+			wsRoutes.GET("/commissions/summary", commissionHandler.GetCommissionSummary)
+			wsRoutes.PUT("/commissions/:id/status", commissionHandler.UpdateCommissionStatus)
+
+			// 3. Live Sales War-Room & Leaderboard TV Mode
+			wsRoutes.GET("/war-room/stats", commissionHandler.GetWarRoomStats)
+			wsRoutes.POST("/war-room/target", commissionHandler.SetTeamTarget)
+
+			// 4. Company Payment & Real QRIS Settings
+			wsRoutes.GET("/payment-settings", commercialOpsHandler.GetPaymentSettings)
+			wsRoutes.PUT("/payment-settings", commercialOpsHandler.UpdatePaymentSettings)
+			wsRoutes.POST("/payment-settings/upload-qris", commercialOpsHandler.UploadQRISImage)
 		}
 
 		// 4. Platform Master Admin routes (Requires Super Admin)
