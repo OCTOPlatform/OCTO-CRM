@@ -151,9 +151,10 @@ export default function SettingsPage() {
   const [copiedBankPreview, setCopiedBankPreview] = useState(false);
 
   const apiBaseUrl =
-    typeof window !== 'undefined'
+    process.env.NEXT_PUBLIC_API_URL ||
+    (typeof window !== 'undefined'
       ? `${window.location.protocol}//${window.location.host.replace(':3000', ':8080')}/api/v1`
-      : 'https://api-crm.octocrm.id/api/v1';
+      : 'https://octo-crm-production-7dcfef0d.up.railway.app/api/v1');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
