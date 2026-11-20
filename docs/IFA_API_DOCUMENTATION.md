@@ -797,3 +797,88 @@ Kanal terpusat untuk membaca dan mengonfigurasi nomor rekening perbankan resmi p
   }
   ```
 
+---
+
+## 18. Endpoint Publik Portal Pembayaran Klien (Zero-Auth External Client)
+
+Untuk memungkinkan klien eksternal melihat tagihan, rincian item, dan melakukan pelunasan via QRIS / Bank Transfer tanpa memerlukan akun login CRM, backend menyediakan rute publik khusus. Seluruh rahasia API (*API Key*, *Server Key*) disanitasi secara otomatis.
+
+### 18.1 Ambil Informasi Pembayaran Publik Invoice
+- **Metode:** `GET /api/v1/public/invoices/:identifier`
+- **Autentikasi:** Tidak Diperlukan (Rute Publik Bebas Akses)
+- **Parameter URL:**
+  - `identifier`: Nomor invoice (contoh: `INV-202611-0001`) atau UUID invoice (`a7da3917-bd33-4ecb-9a27-be29621c7f0c`).
+- **Deskripsi:** Mengembalikan metadata faktur, daftar item rincian penagihan, nama resmi entitas perusahaan penerbit, instruksi rekening bank, dan barcode QRIS aktif (termasuk sesi QRIS dinamis AutoGoPay aktif jika terpasang).
+- **Response `200 OK`:**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "invoice": {
+        "id": "a7da3917-bd33-4ecb-9a27-be29621c7f0c",
+        "invoice_number": "INV-202611-0001",
+        "issue_date": "2026-11-13",
+        "due_date": "2026-11-27",
+        "type": "invoice",
+        "status": "draft",
+        "subtotal": 25000000,
+        "tax_amount": 2750000,
+        "discount_amount": 1000000,
+        "total_amount": 26750000,
+        "notes": "Pengadaan Lisensi OCTO Cloud PBX Enterprise 25 Seats",
+        "items": [
+          {
+            "id": "a7f07b07-4ac8-45d6-99e0-49e1ba68d882",
+            "item_name": "OCTO CRM Enterprise License (Annual)",
+            "sku": "OCTO-CRM-LIC",
+            "quantity": 1,
+            "unit_price": 20000000,
+            "discount": 1000000,
+            "total_price": 19000000
+          }
+        ]
+      },
+      "workspace_name": "PT OCTO Technologies Indonesia",
+      "payment_settings": {
+        "bank_name": "BCA",
+        "bank_account_number": "8905575356",
+        "bank_account_holder": "PT OCTO Technologies Indonesia",
+        "qris_image_url": "https://api.qrserver.com/v1/create-qr-code/?size=350x350&data=000201...",
+        "qris_payload": "00020101021126590014ID.LINKAJA.WWW0118...",
+        "payment_gateway_provider": "autogopay",
+        "autogopay_merchant_name": "OCTO CRM INDONESIA (GOPAY)"
+      },
+      "qris_transaction": {
+        "transaction_id": "AGP-TRX-1729381",
+        "order_id": "ORD-GP-1795102537-e7ba",
+        "amount": 26750000,
+        "qr_string": "00020101021226610014COM.GO-JEK.WWW...",
+        "qr_url": "https://api.qrserver.com/v1/create-qr-code/?size=350x350&data=...",
+        "checkout_url": "https://autogopay.site/pay/AGP-TRX-1729381",
+        "status": "pending",
+        "expiry_time": "2026-11-20T10:35:00Z"
+      }
+    }
+  }
+  ```
+
+### 18.2 Pengecekan Status Real-Time Publik (Auto-Poller)
+- **Metode:** `GET /api/v1/public/invoices/:identifier/status`
+- **Autentikasi:** Tidak Diperlukan (Rute Publik Bebas Akses)
+- **Deskripsi:** Endpoint poller ringan yang dipanggil frontend klien setiap 3-4 detik. Mengembalikan status tagihan (`draft`, `sent`, `paid`), referensi pembayaran, serta waktu pelunasan `paid_at`.
+- **Response `200 OK`:**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "id": "a7da3917-bd33-4ecb-9a27-be29621c7f0c",
+      "invoice_number": "INV-202611-0001",
+      "status": "paid",
+      "total_amount": 26750000,
+      "paid_at": "2026-11-20T10:11:42Z",
+      "payment_method": "qris",
+      "payment_reference": "TX-GP-1729381"
+    }
+  }
+  ```
+

@@ -55,6 +55,8 @@ import {
   WarRoomStats,
   WorkspacePaymentSettings,
   InvoiceQRISTransaction,
+  PublicInvoicePayInfo,
+  PublicInvoiceStatus,
 } from '@/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
@@ -1274,6 +1276,15 @@ class ApiClient {
 
   async checkAutoGopayQRISStatus(wsId: string, invoiceId: string) {
     return this.request<InvoiceQRISTransaction>(`/workspaces/${wsId}/invoices/${invoiceId}/autogopay-status`);
+  }
+
+  // ================= Public Client Invoice & Payment Portal =================
+  async getPublicInvoicePayInfo(identifier: string) {
+    return this.request<PublicInvoicePayInfo>(`/public/invoices/${identifier}`);
+  }
+
+  async getPublicInvoiceStatus(identifier: string) {
+    return this.request<PublicInvoiceStatus>(`/public/invoices/${identifier}/status`);
   }
 }
 

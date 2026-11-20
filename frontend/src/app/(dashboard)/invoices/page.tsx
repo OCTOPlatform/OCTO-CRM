@@ -39,7 +39,16 @@ export default function InvoicesPage() {
   const [paymentSettings, setPaymentSettings] = useState<WorkspacePaymentSettings | null>(null);
   const [payMethodTab, setPayMethodTab] = useState<'qris' | 'bank'>('qris');
   const [copiedBankInvoice, setCopiedBankInvoice] = useState(false);
+  const [copiedPublicLink, setCopiedPublicLink] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  const getPublicPayUrl = (invNumberOrId?: string) => {
+    if (!invNumberOrId) return '';
+    if (typeof window !== 'undefined') {
+      return `${window.location.origin}/pay/${invNumberOrId}`;
+    }
+    return `http://localhost:3000/pay/${invNumberOrId}`;
+  };
 
   // AutoGoPay Dynamic QRIS State
   const [dynamicQrisTx, setDynamicQrisTx] = useState<InvoiceQRISTransaction | null>(null);
@@ -623,6 +632,19 @@ export default function InvoicesPage() {
                               <span>⚡ Bayar QRIS</span>
                             </button>
                           )}
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const payUrl = getPublicPayUrl(inv.invoice_number);
+                              navigator.clipboard.writeText(payUrl);
+                              alert(`🔗 Link Pembayaran Publik berhasil disalin!\n${payUrl}\n\nKlien dapat membuka link ini langsung di smartphone atau browser tanpa login.`);
+                            }}
+                            className="p-1.5 text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition cursor-pointer"
+                            title="Salin Link Pembayaran Klien (Tanpa Login)"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -1009,42 +1031,95 @@ export default function InvoicesPage() {
               </div>
             </div>
 
-            {/* Payment Details / Official Company Bank & QRIS Box */}
-            <div className="p-4 bg-gradient-to-r from-emerald-50 via-teal-50 to-slate-50 rounded-2xl border border-emerald-200/80 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs">
-              <div className="space-y-1">
-                <strong className="text-emerald-950 flex items-center gap-1.5 font-bold">
+            {/* Payment Details / Official Company Bank & Scannable QRIS Box (Embedded for Print & PDF) */}
+            <div className="p-4 bg-gradient-to-r from-emerald-50/70 via-teal-50/40 to-slate-50 rounded-2xl border border-emerald-200/90 flex flex-col md:flex-row items-center justify-between gap-4 text-xs">
+              <div className="space-y-1.5 flex-1">
+                <div className="flex items-center gap-2">
                   <CreditCard className="w-4 h-4 text-emerald-700" />
-                  <span>Instruksi Pembayaran Resmi Perusahaan:</span>
-                </strong>
-                <p className="text-[11px] text-slate-700">
-                  Bank: <strong className="text-slate-900">{paymentSettings?.bank_name || 'BCA'}</strong> • No. Rekening: <span className="font-mono font-bold text-slate-900">{paymentSettings?.bank_account_number || '880129994012'}</span>
-                </p>
-                <p className="text-[11px] text-slate-600">
-                  Atas Nama: <strong className="text-slate-900">{paymentSettings?.bank_account_holder || currentWorkspace?.name || 'PT Maju Bersama Solusindo'}</strong>
-                </p>
-                <p className="text-[10px] text-emerald-700">
-                  Dukungan QRIS Standar Nasional (ASPI/BI), BCA, Livin&apos; Mandiri, BRImo, BNI &amp; Seluruh e-Wallet.
-                </p>
+                  <strong className="text-emerald-950 font-bold text-xs">
+                    Instruksi Pembayaran Resmi Perusahaan:
+                  </strong>
+                </div>
+
+                <div className="bg-white/90 p-2.5 rounded-xl border border-emerald-100 space-y-1">
+                  <p className="text-[11px] text-slate-800">
+                    Bank Tujuan: <strong className="text-slate-900 font-bold">{paymentSettings?.bank_name || 'BCA'}</strong>
+                  </p>
+                  <p className="text-[11px] text-slate-800">
+                    Nomor Rekening PT: <span className="font-mono font-black text-slate-950 text-xs tracking-wider">{paymentSettings?.bank_account_number || '880129994012'}</span>
+                  </p>
+                  <p className="text-[11px] text-slate-800">
+                    Atas Nama Rekening: <strong className="text-slate-900 font-bold">{paymentSettings?.bank_account_holder || currentWorkspace?.name || 'PT Maju Bersama Solusindo'}</strong>
+                  </p>
+                </div>
+
+                <div className="text-[10px] text-slate-500 pt-0.5 space-y-0.5">
+                  <p>✓ Bebas biaya admin &amp; scannable via BCA Mobile, Livin&apos; Mandiri, BRImo, BNI, GoPay, OVO, ShopeePay.</p>
+                  <p className="font-mono text-emerald-700 font-semibold truncate">
+                    Tautan Publik Klien: {getPublicPayUrl(selectedInvoice.invoice_number)}
+                  </p>
+                </div>
               </div>
 
-              {selectedInvoice.status !== 'paid' && (
+              {/* Scannable Physical QRIS Box for Print / Display */}
+              <div className="flex flex-col items-center justify-center p-2.5 bg-white rounded-2xl border border-slate-300 shadow-xs shrink-0 text-center w-36">
+                <div className="bg-[#ED1C24] text-white px-2 py-0.5 rounded-t-md w-full text-[8px] font-black tracking-wider uppercase mb-1">
+                  QRIS Standar
+                </div>
+                <div className="w-24 h-24 p-1 bg-white border border-slate-200 rounded-lg flex items-center justify-center">
+                  <img
+                    src={getFullQrisUrl(paymentSettings?.qris_image_url, paymentSettings?.qris_payload)}
+                    alt="QRIS Barcode Pembayaran"
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+                <span className="text-[7.5px] font-bold text-slate-500 mt-1 uppercase">
+                  Scan untuk Bayar
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row justify-between items-center pt-4 border-t border-slate-100 text-xs text-slate-400 gap-3">
+              <span>{selectedInvoice.terms || 'Terima kasih atas kerja sama Anda.'}</span>
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={() => {
-                    setShowDetailModal(false);
-                    setShowPayModal(true);
+                    const payUrl = getPublicPayUrl(selectedInvoice.invoice_number);
+                    navigator.clipboard.writeText(payUrl);
+                    setCopiedPublicLink(true);
+                    setTimeout(() => setCopiedPublicLink(false), 2000);
                   }}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition cursor-pointer flex items-center gap-1.5 shrink-0"
+                  className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold rounded-xl border border-emerald-200 transition cursor-pointer flex items-center gap-1.5"
+                  title="Salin tautan pembayaran publik untuk dikirim ke klien via WhatsApp atau Email"
                 >
-                  <QrCode className="w-3.5 h-3.5" />
-                  <span>Bayar via QRIS / Rekening PT</span>
+                  {copiedPublicLink ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Link Tersalin!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5 text-emerald-700" />
+                      <span>Salin Link Bayar Klien</span>
+                    </>
+                  )}
                 </button>
-              )}
-            </div>
 
-            <div className="flex justify-between items-center pt-4 border-t border-slate-100 text-xs text-slate-400">
-              <span>{selectedInvoice.terms || 'Terima kasih atas kerja sama Anda.'}</span>
-              <div className="flex gap-2">
+                {selectedInvoice.status !== 'paid' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDetailModal(false);
+                      setShowPayModal(true);
+                    }}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl shadow-xs transition cursor-pointer flex items-center gap-1.5"
+                  >
+                    <QrCode className="w-3.5 h-3.5" />
+                    <span>Bayar via QRIS</span>
+                  </button>
+                )}
+
                 <button
                   type="button"
                   onClick={() => window.print()}
@@ -1053,6 +1128,7 @@ export default function InvoicesPage() {
                   <Printer className="w-3.5 h-3.5" />
                   <span>Cetak PDF</span>
                 </button>
+
                 <button
                   type="button"
                   onClick={() => setShowDetailModal(false)}

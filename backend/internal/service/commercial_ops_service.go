@@ -536,3 +536,72 @@ func (s *CommercialOpsService) HandleAutoGopayWebhook(workspaceID string, rawBod
 
 	return nil
 }
+
+func (s *CommercialOpsService) GetPublicInvoicePayInfo(identifier string) (*domain.PublicInvoicePayInfo, error) {
+	inv, err := s.repo.GetInvoiceByIDOrNumber(identifier)
+	if err != nil {
+		return nil, err
+	}
+	if inv == nil {
+		return nil, errors.New("invoice tidak ditemukan")
+	}
+
+	wsName, _ := s.repo.GetWorkspaceName(inv.WorkspaceID)
+	if wsName == "" {
+		wsName = "OCTO Platform Partner"
+	}
+
+	settings, _ := s.repo.GetPaymentSettings(inv.WorkspaceID)
+	if settings == nil {
+		settings = &domain.WorkspacePaymentSettings{
+			WorkspaceID:            inv.WorkspaceID,
+			BankName:               "BCA",
+			BankAccountNumber:      "880129994012",
+			BankAccountHolder:      wsName,
+			PaymentGatewayProvider: "manual",
+		}
+	}
+
+	// Sembunyikan credential rahasia di endpoint public demi keamanan
+	sanitizedSettings := *settings
+	sanitizedSettings.AutoGopayAPIKey = ""
+	sanitizedSettings.PaymentGatewayClientKey = ""
+	sanitizedSettings.PaymentGatewayServerKey = ""
+
+	var qrisTx *domain.InvoiceQRISTransaction
+	if settings.PaymentGatewayProvider == "autogopay" && settings.AutoGopayAPIKey != "" {
+		tx, err := s.GenerateAutoGopayQRIS(inv.WorkspaceID, inv.ID)
+		if err == nil {
+			qrisTx = tx
+		} else {
+			qrisTx, _ = s.repo.GetActiveQRISTransaction(inv.ID)
+		}
+	} else {
+		qrisTx, _ = s.repo.GetActiveQRISTransaction(inv.ID)
+	}
+
+	return &domain.PublicInvoicePayInfo{
+		Invoice:         *inv,
+		WorkspaceName:   wsName,
+		PaymentSettings: sanitizedSettings,
+		QRISTransaction: qrisTx,
+	}, nil
+}
+
+func (s *CommercialOpsService) GetPublicInvoiceStatus(identifier string) (*domain.PublicInvoiceStatus, error) {
+	inv, err := s.repo.GetInvoiceByIDOrNumber(identifier)
+	if err != nil {
+		return nil, err
+	}
+	if inv == nil {
+		return nil, errors.New("invoice tidak ditemukan")
+	}
+
+	return &domain.PublicInvoiceStatus{
+		InvoiceID:     inv.ID,
+		InvoiceNumber: inv.InvoiceNumber,
+		Status:        inv.Status,
+		PaidAt:        inv.PaidAt,
+		PaymentMethod: inv.PaymentMethod,
+	}, nil
+}

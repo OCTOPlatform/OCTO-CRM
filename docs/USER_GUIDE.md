@@ -316,6 +316,25 @@ Menu ini mengotomatiskan sapaan penawaran dan pengingat follow-up agar tidak ada
 5. **Riwayat Audit Eksekusi (Audit Logs):**
    - Klik tab **"Riwayat Eksekusi (Audit Logs)"** untuk melihat transparansi waktu pengiriman, target prospek, rincian pesan WhatsApp, dan status keberhasilan pengiriman (*Success*).
 
+### 10.5 Portal Pembayaran Publik Klien (`/pay/[id]`) & Cetak Barcode QRIS pada PDF Invoice
+
+Salah satu tantangan utama penagihan B2B adalah ketika invoice dikirimkan kepada klien eksternal dalam format PDF atau link chat, **klien tidak memiliki akun login CRM**. OCTO-CRM menyelesaikan kendala ini dengan dua inovasi kemudahan pembayaran:
+
+1. **Barcode QRIS Standar Nasional Langsung Tercetak pada PDF Invoice:**
+   - Saat tim sales mengklik tombol **"Lihat / Cetak"** pada baris invoice, kotak stand barcode resmi QRIS Standar Nasional (ASPI / BI) disematkan langsung di dalam lembar cetak faktur.
+   - Klien yang menerima lembar invoice fisik (kertas) ataupun membuka file PDF di layar laptop dapat **langsung membuka kamera HP atau m-Banking** (BCA, Mandiri, BRI, BNI, GoPay, OVO, DANA) dan memindai barcode secara instan tanpa perlu bantuan staf.
+   - Pada lembar cetak PDF juga dicantumkan URL publik: `Tautan Publik Klien: https://crm.domain.id/pay/INV-XXXX`.
+
+2. **Portal Pembayaran Publik Mandiri Klien Tanpa Login (`/pay/[id]`):**
+   - Setiap invoice memiliki URL unik publik yang aman (contoh: `https://crm.domain.id/pay/INV-202611-0001` atau via UUID).
+   - Sales representative dapat menyalin link ini hanya dengan 1 klik via tombol icon rantai **"Salin Link Pembayaran Klien"** di tabel invoice atau tombol **"Salin Link Bayar Klien"** di modal detail.
+   - **Fitur Khusus Smartphone & E-Wallet:**
+     - 📱 **Deep-Link Bayar via GoPay:** Klien yang membuka link di smartphone cukup mengetuk tombol ini untuk langsung dialihkan (*deep-linked*) ke aplikasi GoPay dengan nominal yang sudah terkunci presisi tanpa perlu scan barcode di HP sendiri.
+     - 📥 **Simpan Gambar Barcode ke Galeri HP:** Klien dapat menyimpan gambar barcode QRIS ke galeri ponsel mereka, lalu membukanya melalui fitur *"Pindai Gambar dari Galeri"* pada m-Banking/e-wallet.
+     - 📋 **Salin Nomor Rekening 1-Klik:** Tab **Transfer Rekening Bank PT** menyediakan nomor rekening resmi perusahaan dan nama pemilik rekening lengkap dengan tombol salin instan.
+     - ⏱️ **Countdown Sisa Waktu & Auto-Poller Real-Time:** Menampilkan sisa waktu 15 menit. Halaman secara otomatis melakukan auto-refresh status setiap 3.5 detik. Begitu klien menyelesaikan pembayaran di perbankan mereka, portal langsung menampilkan banner selebrasi hijau: **"PEMBAYARAN TELAH BERHASIL DITERIMA!"** dan menyediakan tombol unduh kuitansi resmi lunas.
+     - 🛡️ **Jaminan Keamanan Tingkat Tinggi:** Endpoint publik ini terisolasi dan telah diverifikasi bebas dari kebocoran kredensial rahasia (API key AutoGoPay maupun server key gateway disanitasi secara ketat oleh backend).
+
 ---
 
 ## 11. Sales Commission Engine & Live Sales War-Room TV Mode (`/commissions` & `/war-room`)

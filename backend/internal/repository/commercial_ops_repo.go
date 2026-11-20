@@ -103,6 +103,51 @@ func (r *CommercialOpsRepository) GetInvoiceByID(workspaceID, id string) (*domai
 	return &inv, nil
 }
 
+func (r *CommercialOpsRepository) GetInvoiceByIDOrNumber(identifier string) (*domain.Invoice, error) {
+	var inv domain.Invoice
+	query := `
+		SELECT 
+			i.id, i.workspace_id, i.deal_id, i.contact_id, i.company_id, i.invoice_number,
+			i.issue_date::text AS issue_date, i.due_date::text AS due_date, i.type, i.status,
+			i.subtotal, i.tax_amount, i.discount_amount, i.total_amount,
+			COALESCE(i.notes, '') AS notes,
+			COALESCE(i.terms, '') AS terms,
+			COALESCE(i.payment_method, '') AS payment_method,
+			COALESCE(i.payment_reference, '') AS payment_reference,
+			i.paid_at, i.created_at, i.updated_at,
+			COALESCE(c.first_name || ' ' || c.last_name, '') AS contact_name,
+			COALESCE(c.phone, '') AS contact_phone,
+			COALESCE(comp.name, '') AS company_name,
+			COALESCE(d.title, '') AS deal_title
+		FROM invoices i
+		LEFT JOIN contacts c ON i.contact_id = c.id
+		LEFT JOIN companies comp ON i.company_id = comp.id
+		LEFT JOIN deals d ON i.deal_id = d.id
+		WHERE i.id::text = $1 OR i.invoice_number = $1
+		LIMIT 1
+	`
+	err := r.db.Get(&inv, query, identifier)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	items, err := r.GetInvoiceItems(inv.ID)
+	if err == nil {
+		inv.Items = items
+	}
+
+	return &inv, nil
+}
+
+func (r *CommercialOpsRepository) GetWorkspaceName(workspaceID string) (string, error) {
+	var name string
+	err := r.db.Get(&name, "SELECT name FROM workspaces WHERE id = $1", workspaceID)
+	return name, err
+}
+
 func (r *CommercialOpsRepository) GetInvoiceItems(invoiceID string) ([]domain.InvoiceItem, error) {
 	var items []domain.InvoiceItem
 	query := `

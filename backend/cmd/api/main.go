@@ -160,6 +160,10 @@ func main() {
 		// Public AutoGoPay (GoPay Merchant QRIS) Webhook Callback
 		api.POST("/workspaces/:workspace_id/integrations/autogopay/webhook", commercialOpsHandler.HandleAutoGopayWebhook)
 
+		// Public Client Invoice & Payment Endpoints (No CRM Auth Required)
+		api.GET("/public/invoices/:identifier", commercialOpsHandler.GetPublicInvoicePayInfo)
+		api.GET("/public/invoices/:identifier/status", commercialOpsHandler.GetPublicInvoiceStatus)
+
 		// Public WebChat Widget Endpoints (Website Live Chat from OCTO-WEB)
 		api.POST("/workspaces/:workspace_id/inbox/webchat/send", inboxHandler.PublicWebChatSend)
 		api.GET("/workspaces/:workspace_id/inbox/webchat/messages", inboxHandler.PublicWebChatMessages)

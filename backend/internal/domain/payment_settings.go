@@ -55,6 +55,24 @@ type InvoiceQRISTransaction struct {
 	UpdatedAt       time.Time  `json:"updated_at" db:"updated_at"`
 }
 
+// PublicInvoicePayInfo adalah data invoice publik lengkap dengan rekening & QRIS untuk klien eksternal tanpa login
+type PublicInvoicePayInfo struct {
+	Invoice         Invoice                  `json:"invoice"`
+	WorkspaceName   string                   `json:"workspace_name"`
+	PaymentSettings WorkspacePaymentSettings `json:"payment_settings"`
+	QRISTransaction *InvoiceQRISTransaction   `json:"qris_transaction,omitempty"`
+}
+
+// PublicInvoiceStatus untuk polling status real-time oleh klien eksternal
+type PublicInvoiceStatus struct {
+	InvoiceID     string     `json:"invoice_id"`
+	InvoiceNumber string     `json:"invoice_number"`
+	Status        string     `json:"status"` // 'draft', 'sent', 'paid'
+	PaidAt        *time.Time `json:"paid_at,omitempty"`
+	PaymentMethod string     `json:"payment_method,omitempty"`
+}
+
+
 // AutoGoPay External API Models
 type AutoGopayGenerateQRISRequest struct {
 	Amount int64 `json:"amount"`

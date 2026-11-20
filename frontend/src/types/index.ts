@@ -994,6 +994,22 @@ export interface InvoiceQRISTransaction {
   updated_at: string;
 }
 
+export interface PublicInvoicePayInfo {
+  invoice: Invoice;
+  workspace_name: string;
+  payment_settings: WorkspacePaymentSettings;
+  qris_transaction?: InvoiceQRISTransaction;
+}
+
+export interface PublicInvoiceStatus {
+  invoice_id: string;
+  invoice_number: string;
+  status: 'draft' | 'sent' | 'paid';
+  paid_at?: string;
+  payment_method?: string;
+}
+
+
 
 
 

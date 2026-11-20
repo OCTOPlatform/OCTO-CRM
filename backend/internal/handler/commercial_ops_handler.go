@@ -314,3 +314,35 @@ func (h *CommercialOpsHandler) HandleAutoGopayWebhook(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
+
+func (h *CommercialOpsHandler) GetPublicInvoicePayInfo(c *gin.Context) {
+	identifier := c.Param("identifier")
+	if identifier == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Nomor atau ID invoice wajib diisi"})
+		return
+	}
+
+	info, err := h.svc.GetPublicInvoicePayInfo(identifier)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true, "data": info})
+}
+
+func (h *CommercialOpsHandler) GetPublicInvoiceStatus(c *gin.Context) {
+	identifier := c.Param("identifier")
+	if identifier == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Nomor atau ID invoice wajib diisi"})
+		return
+	}
+
+	status, err := h.svc.GetPublicInvoiceStatus(identifier)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true, "data": status})
+}
