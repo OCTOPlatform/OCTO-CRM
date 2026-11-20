@@ -1203,7 +1203,7 @@ export default function InvoicesPage() {
                           </div>
                           <div className="mt-2 text-center">
                             <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full">
-                              Rp {formatCurrencyIDR(dynamicQrisTx.amount)} (Tepat Presisi)
+                              {formatCurrencyIDR(dynamicQrisTx.amount)} (Tepat Presisi)
                             </span>
                             <p className="text-[8.5px] font-bold text-slate-500 mt-1.5 tracking-wide uppercase">
                               Scan via BCA Mobile • Mandiri • BRImo • GoPay • OVO • DANA • ShopeePay
