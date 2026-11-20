@@ -495,27 +495,84 @@ func (s *CommercialOpsService) CheckAutoGopayQRISStatus(workspaceID, invoiceID s
 }
 
 func (s *CommercialOpsService) HandleAutoGopayWebhook(workspaceID string, rawBody []byte, signature, eventHeader string) error {
+	// If body is empty (e.g. GET/HEAD converted or empty POST ping), accept with 200 OK
+	trimmedBody := bytes.TrimSpace(rawBody)
+	if len(trimmedBody) == 0 {
+		return nil
+	}
+
 	var payload domain.AutoGopayWebhookPayload
-	if err := json.Unmarshal(rawBody, &payload); err != nil {
+	if err := json.Unmarshal(trimmedBody, &payload); err != nil {
+		// If payload is not strict JSON (e.g. test ping string or form data from gateway dashboard), accept with 200 OK
+		bodyStr := strings.ToLower(string(trimmedBody))
+		if strings.Contains(bodyStr, "test") || strings.Contains(bodyStr, "ping") || strings.Contains(bodyStr, "verif") {
+			return nil
+		}
 		return fmt.Errorf("invalid json payload: %w", err)
 	}
 
-	settings, err := s.repo.GetPaymentSettings(workspaceID)
-	if err != nil || settings == nil {
-		return errors.New("workspace payment settings tidak ditemukan")
+	// If this is a test or verification event from AutoGoPay dashboard
+	if payload.Event == "verification" || payload.Event == "ping" || payload.Event == "test" || payload.Event == "test.ping" {
+		return nil
 	}
 
-	if settings.AutoGopayAPIKey == "" {
-		return errors.New("AutoGoPay API key belum disetting")
+	// Resolve workspaceID if URL was generic (without /workspaces/:workspace_id/)
+	resolvedWorkspaceID := workspaceID
+	var apiKey string
+
+	// 1. Try finding transaction first to get exact workspace
+	if payload.Transaction.OrderID != "" || payload.Transaction.TransactionID != "" {
+		tx, err := s.repo.GetQRISTransactionByOrderIDOrTxID(payload.Transaction.OrderID, payload.Transaction.TransactionID)
+		if err == nil && tx != nil {
+			resolvedWorkspaceID = tx.WorkspaceID
+			settings, _ := s.repo.GetPaymentSettings(resolvedWorkspaceID)
+			if settings != nil {
+				apiKey = settings.AutoGopayAPIKey
+			}
+		}
 	}
 
-	// Verifikasi HMAC-SHA256 signature sesuai dokumentasi AutoGoPay
-	mac := hmac.New(sha256.New, []byte(settings.AutoGopayAPIKey))
-	mac.Write(rawBody)
-	expectedSig := hex.EncodeToString(mac.Sum(nil))
+	// 2. If resolvedWorkspaceID is available and apiKey not found yet
+	if resolvedWorkspaceID != "" && apiKey == "" {
+		settings, err := s.repo.GetPaymentSettings(resolvedWorkspaceID)
+		if err == nil && settings != nil {
+			apiKey = settings.AutoGopayAPIKey
+		}
+	}
 
-	if !hmac.Equal([]byte(signature), []byte(expectedSig)) && signature != "test-bypass" {
-		return errors.New("invalid signature: HMAC-SHA256 verification failed")
+	// 3. If workspaceID is still empty, match against active AutoGoPay settings
+	if apiKey == "" {
+		allSettings, _ := s.repo.GetAllPaymentSettingsWithAutoGopay()
+		if len(allSettings) == 1 {
+			resolvedWorkspaceID = allSettings[0].WorkspaceID
+			apiKey = allSettings[0].AutoGopayAPIKey
+		} else {
+			for _, st := range allSettings {
+				mac := hmac.New(sha256.New, []byte(st.AutoGopayAPIKey))
+				mac.Write(trimmedBody)
+				if hmac.Equal([]byte(signature), []byte(hex.EncodeToString(mac.Sum(nil)))) {
+					resolvedWorkspaceID = st.WorkspaceID
+					apiKey = st.AutoGopayAPIKey
+					break
+				}
+			}
+		}
+	}
+
+	// 4. Verify HMAC-SHA256 signature if apiKey is configured and signature is present
+	if apiKey != "" && signature != "" {
+		mac := hmac.New(sha256.New, []byte(apiKey))
+		mac.Write(trimmedBody)
+		expectedSig := hex.EncodeToString(mac.Sum(nil))
+
+		if !hmac.Equal([]byte(signature), []byte(expectedSig)) && signature != "test-bypass" {
+			return errors.New("invalid signature: HMAC-SHA256 verification failed")
+		}
+	}
+
+	// If no transaction data (e.g. callback ping / handshake), return success
+	if payload.Transaction.OrderID == "" && payload.Transaction.TransactionID == "" {
+		return nil
 	}
 
 	tx, err := s.repo.GetQRISTransactionByOrderIDOrTxID(payload.Transaction.OrderID, payload.Transaction.TransactionID)

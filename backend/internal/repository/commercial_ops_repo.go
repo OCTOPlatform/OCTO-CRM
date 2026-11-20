@@ -453,6 +453,24 @@ func (r *CommercialOpsRepository) GetPaymentSettings(workspaceID string) (*domai
 	return &s, nil
 }
 
+func (r *CommercialOpsRepository) GetAllPaymentSettingsWithAutoGopay() ([]domain.WorkspacePaymentSettings, error) {
+	query := `
+		SELECT 
+			id, workspace_id, bank_name, bank_account_number, bank_account_holder,
+			qris_image_url, qris_payload, payment_gateway_provider,
+			payment_gateway_client_key, payment_gateway_server_key,
+			payment_gateway_is_production,
+			COALESCE(autogopay_api_key, '') AS autogopay_api_key,
+			COALESCE(autogopay_merchant_name, '') AS autogopay_merchant_name,
+			created_at, updated_at
+		FROM workspace_payment_settings
+		WHERE autogopay_api_key IS NOT NULL AND autogopay_api_key != ''
+	`
+	var list []domain.WorkspacePaymentSettings
+	err := r.db.Select(&list, query)
+	return list, err
+}
+
 func (r *CommercialOpsRepository) UpsertPaymentSettings(workspaceID string, s domain.WorkspacePaymentSettings) (*domain.WorkspacePaymentSettings, error) {
 	query := `
 		INSERT INTO workspace_payment_settings (

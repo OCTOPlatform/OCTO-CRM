@@ -2498,6 +2498,19 @@ export default function SettingsPage() {
                       <p className="text-[10px] text-slate-500 mt-1">
                         🔒 Notifikasi pembayaran dienkripsi dengan <code>X-Signature</code> (HMAC-SHA256). Saat uang diterima, status invoice otomatis berubah menjadi <strong>PAID</strong> secara real-time.
                       </p>
+
+                      {apiBaseUrl.includes('localhost') && (
+                        <div className="mt-2.5 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-[11px] leading-relaxed">
+                          <strong className="block font-bold text-amber-950 mb-0.5">⚠️ Catatan Penting untuk Pengembangan Lokal (Localhost):</strong>
+                          Server AutoGoPay berjalan di internet dan <em>tidak dapat menjangkau alamat localhost</em> secara langsung. Agar verifikasi callback AutoGoPay berhasil saat diuji dari komputer lokal, gunakan alat tunneling seperti <strong>ngrok</strong>:
+                          <div className="mt-1.5 p-2 bg-white rounded-lg border border-amber-200 font-mono text-[10px] text-slate-800 select-all">
+                            ngrok http 8080
+                          </div>
+                          <span className="block mt-1 text-[10.5px] text-amber-800">
+                            Lalu salin URL HTTPS dari ngrok (contoh: <code>https://xxxx.ngrok-free.app/api/v1/workspaces/{currentWorkspace?.id}/integrations/autogopay/webhook</code>) dan pasang di dashboard AutoGoPay.
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

@@ -127,6 +127,18 @@ func main() {
 	// Static Files (Uploaded media, documents, images)
 	router.Static("/uploads", "./uploads")
 
+	// Root-level AutoGoPay & Generic Webhook Fallbacks (guarantees 200 OK even if /api/v1 is omitted)
+	router.GET("/workspaces/:workspace_id/integrations/autogopay/webhook", commercialOpsHandler.VerifyAutoGopayWebhook)
+	router.POST("/workspaces/:workspace_id/integrations/autogopay/webhook", commercialOpsHandler.HandleAutoGopayWebhook)
+	router.GET("/integrations/autogopay/webhook", commercialOpsHandler.VerifyAutoGopayWebhook)
+	router.POST("/integrations/autogopay/webhook", commercialOpsHandler.HandleAutoGopayWebhook)
+	router.GET("/webhooks/autogopay", commercialOpsHandler.VerifyAutoGopayWebhook)
+	router.POST("/webhooks/autogopay", commercialOpsHandler.HandleAutoGopayWebhook)
+	router.GET("/autogopay/webhook", commercialOpsHandler.VerifyAutoGopayWebhook)
+	router.POST("/autogopay/webhook", commercialOpsHandler.HandleAutoGopayWebhook)
+	router.GET("/webhook", commercialOpsHandler.VerifyAutoGopayWebhook)
+	router.POST("/webhook", commercialOpsHandler.HandleAutoGopayWebhook)
+
 	api := router.Group("/api/v1")
 	{
 		// 1. Auth routes (Public)
@@ -157,8 +169,15 @@ func main() {
 		api.GET("/workspaces/:workspace_id/integrations/tiktok/webhook", integrationHandler.VerifyTikTokWebhook)
 		api.POST("/workspaces/:workspace_id/integrations/tiktok/webhook", integrationHandler.ReceiveTikTokWebhook)
 
-		// Public AutoGoPay (GoPay Merchant QRIS) Webhook Callback
+		// Public AutoGoPay (GoPay Merchant QRIS) Webhook Callback & Verification (Under /api/v1)
+		api.GET("/workspaces/:workspace_id/integrations/autogopay/webhook", commercialOpsHandler.VerifyAutoGopayWebhook)
 		api.POST("/workspaces/:workspace_id/integrations/autogopay/webhook", commercialOpsHandler.HandleAutoGopayWebhook)
+		api.GET("/integrations/autogopay/webhook", commercialOpsHandler.VerifyAutoGopayWebhook)
+		api.POST("/integrations/autogopay/webhook", commercialOpsHandler.HandleAutoGopayWebhook)
+		api.GET("/webhooks/autogopay", commercialOpsHandler.VerifyAutoGopayWebhook)
+		api.POST("/webhooks/autogopay", commercialOpsHandler.HandleAutoGopayWebhook)
+		api.GET("/autogopay/webhook", commercialOpsHandler.VerifyAutoGopayWebhook)
+		api.POST("/autogopay/webhook", commercialOpsHandler.HandleAutoGopayWebhook)
 
 		// Public Client Invoice & Payment Endpoints (No CRM Auth Required)
 		api.GET("/public/invoices/:identifier", commercialOpsHandler.GetPublicInvoicePayInfo)

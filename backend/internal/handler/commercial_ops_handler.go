@@ -296,7 +296,24 @@ func (h *CommercialOpsHandler) CheckAutoGopayQRISStatus(c *gin.Context) {
 	})
 }
 
+func (h *CommercialOpsHandler) VerifyAutoGopayWebhook(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "AutoGoPay callback endpoint is active and verified",
+		"status":  "active",
+	})
+}
+
 func (h *CommercialOpsHandler) HandleAutoGopayWebhook(c *gin.Context) {
+	if c.Request.Method == http.MethodGet || c.Request.Method == http.MethodHead {
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"message": "AutoGoPay callback endpoint is active and verified",
+			"status":  "active",
+		})
+		return
+	}
+
 	workspaceID := c.Param("workspace_id")
 	signature := c.GetHeader("X-Signature")
 	eventHeader := c.GetHeader("X-Callback-Event")
